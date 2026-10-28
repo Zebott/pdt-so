@@ -6,9 +6,9 @@
   <title>ITX PDT Stock Opname Scanner</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#091e3a">
-  <link rel="stylesheet" href="style.css?v=20261028_1730">
+  <link rel="stylesheet" href="style.css?v=20261028_1955">
   <script src="html5-qrcode.min.js"></script>
-  <script src="so_data.js?v=20261028_1730"></script>
+  <script src="so_data.js?v=20261028_1955"></script>
 </head>
 <body>
 
@@ -239,8 +239,9 @@
       <div class="modal-body">
         <pre id="txtPreview" style="font-family: monospace; font-size: 0.78rem; background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 8px; overflow-x: auto; white-space: pre; line-height: 1.5;"></pre>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
         <button type="button" class="btn-preview-txt" id="btnCopyPreview">Salin Teks</button>
+        <button type="button" class="btn-preview-txt" id="btnDownloadFromPreview" style="background: #0284c7; color: white;">📥 Unduh File .TXT</button>
       </div>
     </div>
   </div>
@@ -505,6 +506,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261028_1730"></script>
+  <script src="app.js?v=20261028_1955"></script>
 </body>
 </html>

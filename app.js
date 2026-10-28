@@ -137,7 +137,9 @@
 
   const elModalPreview = document.getElementById('modalPreview');
   const elTxtPreview = document.getElementById('txtPreview') || document.getElementById('txtPreviewArea');
-  const elModalCam = document.getElementById('modalCam');
+  const elModalCam = document.getElementById('camWrapper') || document.getElementById('modalCam');
+  const elModalCamPerm = document.getElementById('modalCamPermission');
+  const elCamFileInput = document.getElementById('cameraSnapInput') || document.getElementById('camFileInput');
 
   let html5QrCode = null;
 
@@ -1518,33 +1520,40 @@
     });
   }
 
-  document.getElementById('btnDownloadTxt').addEventListener('click', handleDownloadClick);
-  document.getElementById('btnDownloadFromPreview').addEventListener('click', handleDownloadClick);
+  const btnDownloadTxt = document.getElementById('btnDownloadTxt');
+  if (btnDownloadTxt) btnDownloadTxt.addEventListener('click', handleDownloadClick);
 
-  // --- Camera Scanner Modal ---
+  const btnDownloadFromPreview = document.getElementById('btnDownloadFromPreview');
+  if (btnDownloadFromPreview) btnDownloadFromPreview.addEventListener('click', handleDownloadClick);
+
+  // --- Camera Scanner ---
   const btnOpenCam = document.getElementById('btnOpenCam');
-  btnOpenCam.addEventListener('click', function () {
-    elModalCam.classList.add('active');
-    startCameraScanner();
-  });
+  if (btnOpenCam) {
+    btnOpenCam.addEventListener('click', function () {
+      if (elModalCam) elModalCam.style.display = 'block';
+      startCameraScanner();
+    });
+  }
 
-  document.getElementById('btnCloseCam').addEventListener('click', function () {
-    stopCameraScanner();
-    elModalCam.classList.remove('active');
-  });
+  const btnCloseCam = document.getElementById('btnCloseCam');
+  if (btnCloseCam) {
+    btnCloseCam.addEventListener('click', function () {
+      stopCameraScanner();
+      if (elModalCam) elModalCam.style.display = 'none';
+    });
+  }
 
-  const elCamAlertDenied = document.getElementById('camAlertDenied');
-  const elReaderHint = document.getElementById('readerHint');
-  const elCamFileInput = document.getElementById('camFileInput');
+  const btnCloseCamPerm = document.getElementById('btnCloseCamPerm');
+  if (btnCloseCamPerm && elModalCamPerm) {
+    btnCloseCamPerm.addEventListener('click', () => elModalCamPerm.classList.remove('active'));
+  }
+
   const btnTriggerSnap = document.getElementById('btnTriggerSnap');
-  const btnSnapFallback = document.getElementById('btnSnapFallback');
-
   function triggerNativeCameraCapture() {
-    elCamFileInput.click();
+    if (elCamFileInput) elCamFileInput.click();
   }
 
   if (btnTriggerSnap) btnTriggerSnap.addEventListener('click', triggerNativeCameraCapture);
-  if (btnSnapFallback) btnSnapFallback.addEventListener('click', triggerNativeCameraCapture);
 
   if (elCamFileInput) {
     elCamFileInput.addEventListener('change', function (e) {
@@ -1559,7 +1568,8 @@
       html5QrCode.scanFile(file, true)
         .then(decodedText => {
           stopCameraScanner();
-          elModalCam.classList.remove('active');
+          if (elModalCam) elModalCam.style.display = 'none';
+          if (elModalCamPerm) elModalCamPerm.classList.remove('active');
           elScanInput.value = decodedText;
           updateLiveItemPreview(decodedText);
           handleScanInput();
@@ -1592,7 +1602,8 @@
       (decodedText) => {
         playBeepSuccess();
         stopCameraScanner();
-        elModalCam.classList.remove('active');
+        if (elModalCam) elModalCam.style.display = 'none';
+        if (elModalCamPerm) elModalCamPerm.classList.remove('active');
         elScanInput.value = decodedText;
         updateLiveItemPreview(decodedText);
         handleScanInput();
@@ -1600,8 +1611,7 @@
       () => {}
     ).catch(err => {
       console.warn('Camera stream blocked:', err);
-      if (elCamAlertDenied) elCamAlertDenied.style.display = 'block';
-      if (elReaderHint) elReaderHint.style.display = 'none';
+      if (elModalCamPerm) elModalCamPerm.classList.add('active');
     });
   }
 
