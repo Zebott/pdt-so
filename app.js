@@ -91,6 +91,7 @@
   // --- State & Storage ---
   const STORAGE_KEY = 'ITX_PDT_SO_SESSION_V1';
   const ARCHIVE_KEY = 'ITX_PDT_SO_ARCHIVES_V1';
+  const RACKS_STORAGE_KEY = 'ITX_PDT_SO_REGISTERED_RACKS_V1';
 
   let database = { items: {}, lokasi: [], barcodes: {} };
 
@@ -98,11 +99,12 @@
     tanggal: '',
     lokasiToko: '58015',
     userSo: 'SUKRON',
-    kodeRak: 'D001',
+    kodeRak: 'AA/001',
     deviceId: '1',
     docBatch: '12814',
     items: [],
-    activePendingItem: null
+    activePendingItem: null,
+    registeredRacks: []
   };
 
   // --- DOM Elements ---
@@ -130,14 +132,112 @@
   const elTotalLines = document.getElementById('totalLines');
   const elTotalQty = document.getElementById('totalQty');
   const elActiveRack = document.getElementById('activeRackDisplay');
-  const elItemList = document.getElementById('scannedItemList');
+  const elItemList = document.getElementById('itemList') || document.getElementById('scannedItemList');
   const elEmptyState = document.getElementById('emptyState');
 
   const elModalPreview = document.getElementById('modalPreview');
-  const elTxtPreview = document.getElementById('txtPreviewArea');
+  const elTxtPreview = document.getElementById('txtPreview') || document.getElementById('txtPreviewArea');
   const elModalCam = document.getElementById('modalCam');
 
   let html5QrCode = null;
+
+
+  // --- MASTER RACK REGISTRATION & STRICT VALIDATION ---
+  function getDefaultRacks() {
+    const def = [];
+    for (let i = 1; i <= 100; i++) {
+      def.push('AA/' + String(i).padStart(3, '0'));
+    }
+    def.push('D001');
+    return def;
+  }
+
+  function loadRegisteredRacks() {
+    try {
+      const raw = localStorage.getItem(RACKS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          state.registeredRacks = parsed;
+          return;
+        }
+      }
+    } catch (e) {}
+    state.registeredRacks = getDefaultRacks();
+    saveRegisteredRacks();
+  }
+
+  function saveRegisteredRacks() {
+    try {
+      localStorage.setItem(RACKS_STORAGE_KEY, JSON.stringify(state.registeredRacks));
+    } catch (e) {}
+  }
+
+  function isRackValid(code) {
+    if (!code) return false;
+    const clean = code.trim().toUpperCase();
+    if (!state.registeredRacks || state.registeredRacks.length === 0) {
+      return false;
+    }
+    return state.registeredRacks.includes(clean);
+  }
+
+  function updateRackUI() {
+    // Populate datalist
+    const listEl = document.getElementById('listRegisteredRacks');
+    if (listEl) {
+      listEl.innerHTML = state.registeredRacks.map(r => `<option value="${r}">`).join('');
+    }
+
+    // Status badge
+    const badgeEl = document.getElementById('rackValidationStatus');
+    if (badgeEl) {
+      const isValid = isRackValid(state.kodeRak);
+      if (isValid) {
+        badgeEl.className = 'rack-status-badge valid';
+        badgeEl.innerHTML = `✓ Rak Terdaftar Sah (<strong>${state.kodeRak}</strong> dari ${state.registeredRacks.length} rak)`;
+      } else {
+        badgeEl.className = 'rack-status-badge invalid';
+        badgeEl.innerHTML = `⛔ Rak <strong>${state.kodeRak || '(Kosong)'}</strong> TIDAK TERDAFTAR (Ditolak)`;
+      }
+    }
+
+    // Stat bar
+    if (elActiveRack) {
+      elActiveRack.textContent = state.kodeRak || '-';
+    }
+    if (elKodeRak && elKodeRak.value !== state.kodeRak) {
+      elKodeRak.value = state.kodeRak;
+    }
+  }
+
+  // Rejection Modal
+  const modalRackRejected = document.getElementById('modalRackRejected');
+  const elRejectedRackName = document.getElementById('rejectedRackName');
+  const btnCloseRackRejected = document.getElementById('btnCloseRackRejected');
+  const btnDismissRackRejected = document.getElementById('btnDismissRackRejected');
+
+  function showRackRejectedModal(rejectedCode) {
+    if (elRejectedRackName) {
+      elRejectedRackName.textContent = rejectedCode || '(Kosong)';
+    }
+    if (modalRackRejected) {
+      modalRackRejected.classList.add('active');
+    }
+  }
+
+  function closeRackRejectedModal() {
+    if (modalRackRejected) {
+      modalRackRejected.classList.remove('active');
+    }
+    if (elKodeRak) {
+      elKodeRak.value = state.kodeRak;
+      elKodeRak.focus();
+    }
+  }
+
+  if (btnCloseRackRejected) btnCloseRackRejected.addEventListener('click', closeRackRejectedModal);
+  if (btnDismissRackRejected) btnDismissRackRejected.addEventListener('click', closeRackRejectedModal);
 
   // --- Toast ---
   function showToast(msg, isErr = false) {
@@ -250,6 +350,12 @@
       state.tanggal = `${yyyy}-${mm}-${dd}`;
     }
 
+    loadRegisteredRacks();
+    // Validate loaded rack
+    if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
+      state.kodeRak = state.registeredRacks[0];
+    }
+
     elDate.value = state.tanggal;
     elLokToko.value = state.lokasiToko;
     elUserSo.value = state.userSo;
@@ -258,13 +364,14 @@
     elDocBatch.value = state.docBatch;
 
     updateLocationBadge();
+    updateRackUI();
     renderUI();
   }
 
   // --- Render UI ---
   function renderUI() {
     elTotalLines.textContent = state.items.length;
-    elActiveRack.textContent = state.kodeRak || '-';
+    updateRackUI();
 
     const sumQty = state.items.reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0);
     elTotalQty.textContent = sumQty.toFixed(2);
@@ -448,6 +555,11 @@
 
   // --- Add Item to Stock Opname Session ---
   function addItemToSession(plu, name, qty, scannedCode = '', article = '') {
+    if (!isRackValid(state.kodeRak)) {
+      playBeepError();
+      showRackRejectedModal(state.kodeRak || '(Kosong)');
+      return;
+    }
     const nextSeq = state.items.length + 1;
     const nowTime = formatSoTimestamp(new Date());
     const rack = state.kodeRak.trim().toUpperCase() || 'D001';
@@ -488,6 +600,14 @@
     const rawVal = elScanInput.value.trim();
     elSuggestBox.style.display = 'none';
 
+    // 1. STRICT CHECK: Is the active rack valid & registered?
+    if (!state.kodeRak || !isRackValid(state.kodeRak)) {
+      playBeepError();
+      showRackRejectedModal(state.kodeRak || '(Kosong)');
+      showToast('Nomor rak tidak sah! Pilih rak terdaftar dahulu.', true);
+      return;
+    }
+
     if (!rawVal) {
       showToast('Ketik atau scan barcode / PLU terlebih dahulu!', true);
       elScanInput.focus();
@@ -504,6 +624,9 @@
       showToast(`Barcode / PLU '${rawVal}' tidak ditemukan di database!`, true);
       addItemToSession(rawVal, `[ITEM MANUAL ${rawVal}]`, currentQty, rawVal, '');
     }
+
+    // Reset QTY back to 1 for the next scan
+    if (elMainQty) elMainQty.value = '1';
   }
 
   // --- Autocomplete search as user types & Live Item Preview ---
@@ -634,25 +757,230 @@
     });
   });
 
-  // --- Change Kode Rak / Area SO ---
+  // --- Change Kode Rak / Area SO (Strict Rejection Rule) ---
   elKodeRak.addEventListener('change', function () {
-    state.kodeRak = elKodeRak.value.trim().toUpperCase() || 'D001';
+    const val = elKodeRak.value.trim().toUpperCase();
+    if (!isRackValid(val)) {
+      playBeepError();
+      showRackRejectedModal(val);
+      elKodeRak.value = state.kodeRak;
+      updateRackUI();
+      return;
+    }
+    state.kodeRak = val;
     saveSession();
+    updateRackUI();
     renderUI();
+    showToast(`Rak aktif diubah ke: ${state.kodeRak}`);
   });
 
-  document.getElementById('btnNewRack').addEventListener('click', function () {
-    const current = state.kodeRak.trim();
-    let nextRack = prompt('Masukkan Nomor Rak / Area SO Baru (misal D002, RAK-01):', current);
-    if (nextRack && nextRack.trim()) {
-      state.kodeRak = nextRack.trim().toUpperCase();
-      elKodeRak.value = state.kodeRak;
-      saveSession();
-      renderUI();
-      showToast(`Rak SO aktif diubah ke: ${state.kodeRak}`);
-      elScanInput.focus();
+  // --- Modal Pilih / Ganti Rak Cepat (Registered Only) ---
+  const modalSelectRack = document.getElementById('modalSelectRack');
+  const btnCloseSelectRack = document.getElementById('btnCloseSelectRack');
+  const inputFilterRack = document.getElementById('inputFilterRack');
+  const btnConfirmCustomRack = document.getElementById('btnConfirmCustomRack');
+  const rackSelectContainer = document.getElementById('rackSelectContainer');
+
+  function openSelectRackModal() {
+    renderSelectRackList('');
+    if (inputFilterRack) inputFilterRack.value = '';
+    if (modalSelectRack) modalSelectRack.classList.add('active');
+    setTimeout(() => { if (inputFilterRack) inputFilterRack.focus(); }, 150);
+  }
+
+  function renderSelectRackList(filterText = '') {
+    if (!rackSelectContainer) return;
+    const q = (filterText || '').trim().toUpperCase();
+    const filtered = state.registeredRacks.filter(r => !q || r.includes(q));
+
+    if (filtered.length === 0) {
+      rackSelectContainer.innerHTML = `<div style="padding: 10px; color: #94a3b8; font-size: 0.85rem; width: 100%; text-align: center;">Tidak ada nomor rak terdaftar yang cocok dengan '${filterText}'</div>`;
+      return;
     }
-  });
+
+    rackSelectContainer.innerHTML = filtered.map(r => `
+      <button type="button" class="rack-select-item ${r === state.kodeRak ? 'selected' : ''}" data-rack="${r}">
+        ${r}
+      </button>
+    `).join('');
+
+    rackSelectContainer.querySelectorAll('.rack-select-item').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const selected = this.getAttribute('data-rack');
+        selectActiveRack(selected);
+      });
+    });
+  }
+
+  function selectActiveRack(rack) {
+    if (!isRackValid(rack)) {
+      playBeepError();
+      showRackRejectedModal(rack);
+      return;
+    }
+    state.kodeRak = rack;
+    if (elKodeRak) elKodeRak.value = rack;
+    saveSession();
+    updateRackUI();
+    renderUI();
+    showToast(`Rak aktif: ${state.kodeRak}`);
+    if (modalSelectRack) modalSelectRack.classList.remove('active');
+    if (elScanInput) elScanInput.focus();
+  }
+
+  const elBtnNewRack = document.getElementById('btnNewRack');
+  if (elBtnNewRack) elBtnNewRack.addEventListener('click', openSelectRackModal);
+  if (btnCloseSelectRack) btnCloseSelectRack.addEventListener('click', () => modalSelectRack.classList.remove('active'));
+
+  if (inputFilterRack) {
+    inputFilterRack.addEventListener('input', () => {
+      renderSelectRackList(inputFilterRack.value);
+    });
+    inputFilterRack.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = inputFilterRack.value.trim().toUpperCase();
+        selectActiveRack(val);
+      }
+    });
+  }
+
+  if (btnConfirmCustomRack) {
+    btnConfirmCustomRack.addEventListener('click', () => {
+      const val = inputFilterRack.value.trim().toUpperCase();
+      selectActiveRack(val);
+    });
+  }
+
+  // --- Modal Kelola & Daftarkan Rak SO ---
+  const modalManageRacks = document.getElementById('modalManageRacks');
+  const btnOpenManageRacks = document.getElementById('btnOpenManageRacks');
+  const btnCloseManageRacks = document.getElementById('btnCloseManageRacks');
+  const btnSaveManageRacks = document.getElementById('btnSaveManageRacks');
+
+  const genRackPrefix = document.getElementById('genRackPrefix');
+  const genRackStart = document.getElementById('genRackStart');
+  const genRackEnd = document.getElementById('genRackEnd');
+  const genRackDigits = document.getElementById('genRackDigits');
+  const btnGenerateRange = document.getElementById('btnGenerateRange');
+
+  const txtManualRacks = document.getElementById('txtManualRacks');
+  const btnAddManualRacks = document.getElementById('btnAddManualRacks');
+  const cloudRegisteredRacks = document.getElementById('cloudRegisteredRacks');
+  const countRegisteredRacks = document.getElementById('countRegisteredRacks');
+  const btnClearAllRacks = document.getElementById('btnClearAllRacks');
+
+  function openManageRacksModal() {
+    renderRegisteredRacksCloud();
+    if (modalManageRacks) modalManageRacks.classList.add('active');
+  }
+
+  function renderRegisteredRacksCloud() {
+    if (countRegisteredRacks) countRegisteredRacks.textContent = state.registeredRacks.length;
+    if (!cloudRegisteredRacks) return;
+
+    if (state.registeredRacks.length === 0) {
+      cloudRegisteredRacks.innerHTML = '<div style="padding: 12px; color: #dc2626; font-size: 0.85rem; width: 100%; text-align: center; font-weight: 700;">⚠️ Belum ada rak yang didaftarkan! Masukkan rentang rak di atas.</div>';
+      return;
+    }
+
+    cloudRegisteredRacks.innerHTML = state.registeredRacks.map(r => `
+      <span class="rack-tag">
+        ${r}
+        <span class="rack-tag-del" data-rack="${r}" title="Hapus rak ini">×</span>
+      </span>
+    `).join('');
+
+    cloudRegisteredRacks.querySelectorAll('.rack-tag-del').forEach(delBtn => {
+      delBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const rToDel = this.getAttribute('data-rack');
+        state.registeredRacks = state.registeredRacks.filter(r => r !== rToDel);
+        saveRegisteredRacks();
+        renderRegisteredRacksCloud();
+        updateRackUI();
+      });
+    });
+  }
+
+  if (btnOpenManageRacks) btnOpenManageRacks.addEventListener('click', openManageRacksModal);
+  if (btnCloseManageRacks) btnCloseManageRacks.addEventListener('click', () => modalManageRacks.classList.remove('active'));
+  if (btnSaveManageRacks) {
+    btnSaveManageRacks.addEventListener('click', () => {
+      modalManageRacks.classList.remove('active');
+      updateRackUI();
+      showToast(`Daftar ${state.registeredRacks.length} rak berhasil diterapkan!`);
+    });
+  }
+
+  // Generate Range handler (e.g. AA/001 - AA/100)
+  if (btnGenerateRange) {
+    btnGenerateRange.addEventListener('click', function () {
+      const prefix = (genRackPrefix.value || 'AA/').trim().toUpperCase();
+      const start = parseInt(genRackStart.value) || 1;
+      const end = parseInt(genRackEnd.value) || 100;
+      const digits = parseInt(genRackDigits.value) || 3;
+
+      if (start > end) {
+        alert('Nomor mulai tidak boleh lebih besar dari nomor selesai!');
+        return;
+      }
+      if (end - start > 5000) {
+        alert('Maksimal rentang sekaligus adalah 5.000 nomor rak!');
+        return;
+      }
+
+      let addedCount = 0;
+      for (let i = start; i <= end; i++) {
+        const code = prefix + String(i).padStart(digits, '0');
+        if (!state.registeredRacks.includes(code)) {
+          state.registeredRacks.push(code);
+          addedCount++;
+        }
+      }
+
+      state.registeredRacks.sort();
+      saveRegisteredRacks();
+      renderRegisteredRacksCloud();
+      updateRackUI();
+      showToast(`Berhasil menambahkan ${addedCount} nomor rak ke master!`);
+    });
+  }
+
+  // Manual Add handler
+  if (btnAddManualRacks) {
+    btnAddManualRacks.addEventListener('click', function () {
+      const raw = (txtManualRacks.value || '').trim();
+      if (!raw) return;
+      const parts = raw.split(/[\r\n,;\t]+/);
+      let addedCount = 0;
+      parts.forEach(p => {
+        const clean = p.trim().toUpperCase();
+        if (clean && !state.registeredRacks.includes(clean)) {
+          state.registeredRacks.push(clean);
+          addedCount++;
+        }
+      });
+      txtManualRacks.value = '';
+      state.registeredRacks.sort();
+      saveRegisteredRacks();
+      renderRegisteredRacksCloud();
+      updateRackUI();
+      showToast(`Berhasil menambahkan ${addedCount} nomor rak ke master!`);
+    });
+  }
+
+  // Clear all racks
+  if (btnClearAllRacks) {
+    btnClearAllRacks.addEventListener('click', function () {
+      if (confirm('Yakin ingin menghapus seluruh daftar nomor rak resmi?')) {
+        state.registeredRacks = [];
+        saveRegisteredRacks();
+        renderRegisteredRacksCloud();
+        updateRackUI();
+        showToast('Seluruh daftar rak telah dikosongkan.');
+      }
+    });
+  }
 
   // Header inputs change listeners
   elDate.addEventListener('change', () => { state.tanggal = elDate.value; saveSession(); });

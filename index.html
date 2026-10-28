@@ -49,18 +49,27 @@
         <div class="form-grid">
           <!-- INPUT LOKASI TOKO (MANUAL / KETIK NAMA/KODE) -->
           <div class="form-group" style="position: relative;">
-            <label>Lokasi Toko / Gudang (Ketik Kode / Nama)</label>
-            <input type="text" id="inputLokToko" class="form-control" placeholder="Ketik kode 58015 / nama toko..." value="58015" autocomplete="off">
+            <label>Lokasi Toko / Cabang</label>
+            <input type="text" id="inputLokToko" class="form-control" placeholder="Ketik kode / nama toko..." value="58015" autocomplete="off">
             <div id="badgeLokToko" class="lokasi-verified-badge">🏬 58015 - HERO KIDS GUDANG BEKASI</div>
             <div id="suggestLokToko" class="suggest-box" style="display: none;"></div>
           </div>
 
-          <!-- INPUT NOMOR RAK / AREA AKTIF -->
+          <!-- INPUT NOMOR RAK / AREA AKTIF (STRICT VALIDATION) -->
           <div class="form-group">
-            <label>Nomor Rak / Area Display</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="margin: 0;">Nomor Rak Aktif</label>
+              <button type="button" class="btn-manage-racks" id="btnOpenManageRacks" title="Kelola / Daftarkan Daftar Rak SO">
+                📋 Daftarkan Rak
+              </button>
+            </div>
             <div class="rack-row">
-              <input type="text" id="inputKodeRak" class="form-control rack-highlight" value="D001" placeholder="D001">
-              <button class="btn-new-rack" id="btnNewRack">+ Rak Baru</button>
+              <input type="text" id="inputKodeRak" class="form-control rack-highlight" list="listRegisteredRacks" value="AA/001" placeholder="Pilih / Ketik Rak..." autocomplete="off">
+              <datalist id="listRegisteredRacks"></datalist>
+              <button type="button" class="btn-new-rack" id="btnNewRack" title="Ganti ke Rak Terdaftar">+ Ganti Rak</button>
+            </div>
+            <div id="rackValidationStatus" class="rack-status-badge valid">
+              ✓ Rak Terdaftar Sah (AA/001)
             </div>
           </div>
         </div>
@@ -78,32 +87,46 @@
       </div>
     </div>
 
-    <!-- Main Scanner Box with Explicit QTY Input -->
+    <!-- Main Scanner Box: Vertical Stack (QTY di Atas, Kotak Scan di Bawah) -->
     <div class="scan-box-wrapper">
       
-      <div class="scan-grid-main">
-        <!-- ISIAN MANUAL QTY -->
-        <div class="form-group" style="margin-bottom: 0;">
-          <label style="color: #0369a1; font-size: 0.75rem; font-weight: 800;">QTY HITUNG</label>
-          <div class="qty-control-box">
-            <button type="button" class="qty-btn-touch" id="btnQtyTouchMinus">−</button>
-            <input type="number" id="inputMainQty" class="input-qty-number" value="1" min="0.01" step="any" placeholder="1">
-            <button type="button" class="qty-btn-touch" id="btnQtyTouchPlus">+</button>
-          </div>
+      <!-- 1. ISIAN MANUAL QTY (DI ATAS SCANNER) -->
+      <div class="qty-section-box">
+        <div class="qty-header-row">
+          <label class="qty-title-label">JUMLAH / QTY HITUNG</label>
+          <span style="font-size: 0.72rem; color: #0369a1; font-weight: 700;">Ubah sebelum scan jika barang per-karton</span>
+        </div>
+        <div class="qty-control-box">
+          <button type="button" class="qty-btn-touch" id="btnQtyTouchMinus" title="Kurangi 1">−</button>
+          <input type="number" id="inputMainQty" class="input-qty-number" value="1" min="0.01" step="any" placeholder="1">
+          <button type="button" class="qty-btn-touch" id="btnQtyTouchPlus" title="Tambah 1">+</button>
         </div>
 
-        <!-- INPUT SCAN BARCODE / PLU -->
-        <div class="form-group" style="margin-bottom: 0;">
-          <label style="color: #0369a1; font-size: 0.75rem; font-weight: 800;">SCAN BARCODE / PLU</label>
-          <div class="scan-input-group">
-            <input type="text" id="inputScanCode" class="scan-input" placeholder="Scan Barcode / PLU..." autocomplete="off" autofocus>
-            <button class="scan-cam-btn" id="btnOpenCam" title="Buka Kamera HP">📷</button>
-            <div class="suggest-box" id="suggestBox" style="display: none;"></div>
-          </div>
+        <!-- Quick Qty Shortcut Buttons -->
+        <div class="quick-qty-container">
+          <span class="quick-qty-label">Pilihan Cepat:</span>
+          <button type="button" class="qty-chip" data-qty="1">1</button>
+          <button type="button" class="qty-chip" data-qty="2">2</button>
+          <button type="button" class="qty-chip" data-qty="5">5</button>
+          <button type="button" class="qty-chip" data-qty="10">10</button>
+          <button type="button" class="qty-chip" data-qty="12">12</button>
+          <button type="button" class="qty-chip" data-qty="24">24</button>
+          <button type="button" class="qty-chip" data-qty="50">50</button>
+          <button type="button" class="qty-chip" data-qty="100">100</button>
         </div>
       </div>
 
-      <!-- Live Item Display (Shows immediately as user types or scans) -->
+      <!-- 2. KOTAK SCAN BARCODE / PLU (DI BAWAH QTY) -->
+      <div class="scan-section-box">
+        <label class="scan-title-label">SCAN BARCODE / PLU BARANG</label>
+        <div class="scan-input-group">
+          <input type="text" id="inputScanCode" class="scan-input" placeholder="Tembak Barcode / Ketik PLU..." autocomplete="off" autofocus>
+          <button type="button" class="scan-cam-btn" id="btnOpenCam" title="Buka Kamera HP">📷</button>
+          <div class="suggest-box" id="suggestBox" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- 3. Live Item Display (Shows immediately as user types or scans) -->
       <div id="liveItemCard" class="live-item-card">
         <div class="live-item-icon" id="liveItemIcon">📦</div>
         <div class="live-item-body">
@@ -112,20 +135,7 @@
         </div>
       </div>
 
-      <!-- Quick Qty Shortcut Buttons -->
-      <div class="quick-qty-container">
-        <span class="quick-qty-label">Qty Cepat:</span>
-        <button type="button" class="qty-chip" data-qty="1">1</button>
-        <button type="button" class="qty-chip" data-qty="2">2</button>
-        <button type="button" class="qty-chip" data-qty="5">5</button>
-        <button type="button" class="qty-chip" data-qty="10">10</button>
-        <button type="button" class="qty-chip" data-qty="12">12</button>
-        <button type="button" class="qty-chip" data-qty="24">24</button>
-        <button type="button" class="qty-chip" data-qty="50">50</button>
-        <button type="button" class="qty-chip" data-qty="100">100</button>
-      </div>
-
-      <!-- Manual Submit Button -->
+      <!-- 4. Manual Submit Button -->
       <div style="margin-top: 10px;">
         <button type="button" class="btn-add-item" id="btnManualSubmit" style="width: 100%;">
           ➕ TAMBAH ITEM KE RAK (ENTER)
@@ -143,100 +153,100 @@
           <button class="btn-add-item" id="btnAddItem">SIMPAN ITEM</button>
         </div>
       </div>
-
     </div>
 
-    <!-- Summary Bar -->
-    <div class="summary-bar">
-      <div class="summary-box">
-        <div class="summary-box-label">Total Baris</div>
-        <div class="summary-box-val" id="totalLines">0</div>
-      </div>
-      <div class="summary-box">
-        <div class="summary-box-label">Total QTY</div>
-        <div class="summary-box-val" id="totalQty">0.00</div>
-      </div>
-      <div class="summary-box">
-        <div class="summary-box-label">Rak Aktif</div>
-        <div class="summary-box-val" id="activeRackDisplay" style="color: #b45309;">-</div>
+    <!-- Banner Susulan Indicator -->
+    <div id="bannerSusulan" class="banner-susulan" style="display: none;">
+      <div class="banner-susulan-icon">⚠️</div>
+      <div class="banner-susulan-text" id="bannerSusulanText">
+        Item baru ditambahkan setelah download. Sistem akan memisahkan file susulan.
       </div>
     </div>
-    
-    <!-- Status Rak Susulan Banner -->
-    <div id="bannerSusulan" style="display:none; background:#eff6ff; border:1.5px solid #93c5fd; border-radius:10px; padding:8px 12px; margin-bottom:12px; font-size:0.85rem; color:#1e40af; align-items:center; justify-content:space-between;">
-      <div>
-        <strong>📦 Info Opname:</strong> <span id="bannerSusulanText">-</span>
+
+    <!-- Quick Stats -->
+    <div class="stats-bar">
+      <div class="stat-box">
+        <div class="stat-val" id="totalLines">0</div>
+        <div class="stat-lbl">Total Baris</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="totalQty">0.00</div>
+        <div class="stat-lbl">Total QTY</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val active-rack" id="activeRackDisplay">AA/001</div>
+        <div class="stat-lbl">Rak Aktif</div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-grid">
+      <button class="btn-download-txt" id="btnDownloadTxt">
+        <span>💾</span> Download File .TXT
+      </button>
+      <button class="btn-preview-txt" id="btnPreviewTxt">
+        <span>👁️</span> Preview TXT
+      </button>
+    </div>
+
+    <!-- Camera Scanner Box (Hidden by default) -->
+    <div class="cam-wrapper" id="camWrapper" style="display: none;">
+      <div id="reader"></div>
+      <div class="cam-controls">
+        <span style="color: white; font-size: 0.8rem;">Arahkan kamera ke barcode</span>
+        <button class="btn-cam-close" id="btnCloseCam">Tutup Kamera</button>
       </div>
     </div>
 
     <!-- Scanned Items List -->
-    <div class="item-list" id="scannedItemList"></div>
-
-    <!-- Empty State -->
-    <div class="empty-state" id="emptyState">
-      <div style="font-size: 2.8rem; margin-bottom: 8px;">📋</div>
-      <div style="font-weight: 800; font-size: 1.05rem;">Belum ada barang di-scan untuk Stock Opname</div>
-      <div style="font-size: 0.82rem; margin-top: 4px;">Pilih Rak, tentukan QTY, lalu tembak barcode barang dengan laser Honeywell atau kamera.</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="list-title">📋 Hasil Scan Stock Opname</div>
+        <div class="list-hint">Terbaru di atas</div>
+      </div>
+      <div class="card-body" style="padding: 10px;">
+        <div class="item-list" id="itemList"></div>
+        <div class="empty-box" id="emptyState">
+          <div class="empty-icon">📦</div>
+          <div style="font-weight: 700; color: var(--secondary);">Belum ada barang di-scan</div>
+          <div style="font-size: 0.8rem; margin-top: 4px;">Pastikan nomor rak sudah benar, lalu tembak barcode barang</div>
+        </div>
+      </div>
     </div>
 
   </main>
 
-  <!-- Fixed Bottom Bar -->
-  <div class="bottom-bar">
-    <div class="bottom-inner">
-      <button type="button" class="btn-preview-txt" id="btnPreviewTxt">
-        👁️ Preview
-      </button>
-      <button type="button" class="btn-download-txt" id="btnDownloadTxt">
-        💾 DOWNLOAD TXT (OPNAME)
-      </button>
-    </div>
-  </div>
-
-  <!-- Modal Preview TXT File -->
+  <!-- MODAL 1: PREVIEW TXT -->
   <div class="modal-overlay" id="modalPreview">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 650px;">
       <div class="modal-header">
         <div>
-          <span>Isi File Stock Opname (.TXT)</span>
-          <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700;" id="previewFilenameDisplay">-</div>
+          <span>Format Hasil File .TXT</span>
+          <div style="font-size: 0.75rem; color: #0284c7; font-weight: 700;" id="previewFilenameDisplay">dc_1_op_...txt</div>
         </div>
         <button class="modal-close" id="btnClosePreview">✕</button>
       </div>
       <div class="modal-body">
-        <pre id="txtPreviewArea" style="background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 8px; font-size: 0.74rem; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 50vh; overflow-y: auto;"></pre>
+        <pre id="txtPreview" style="font-family: monospace; font-size: 0.78rem; background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 8px; overflow-x: auto; white-space: pre; line-height: 1.5;"></pre>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-preview-txt" id="btnCopyPreview">📋 Salin Teks</button>
-        <button type="button" class="btn-download-txt" id="btnDownloadFromPreview">💾 Unduh TXT</button>
+        <button type="button" class="btn-preview-txt" id="btnCopyPreview">Salin Teks</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal Camera Scanner -->
-  <div class="modal-overlay" id="modalCam">
-    <div class="modal-box">
+  <!-- MODAL 2: CAMERA PERMISSION & SNAP -->
+  <div class="modal-overlay" id="modalCamPermission">
+    <div class="modal-box" style="max-width: 440px;">
       <div class="modal-header">
-        <span>📸 Kamera Scanner Barcode</span>
-        <button class="modal-close" id="btnCloseCam">✕</button>
+        <span>⚠️ Izin Kamera Dibutuhkan</span>
+        <button class="modal-close" id="btnCloseCamPerm">✕</button>
       </div>
-      <div class="modal-body" style="text-align: center;">
-        <div id="camAlertDenied" style="display: none; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; font-size: 0.85rem; color: #92400e;">
-          <strong>⚠️ Izin Kamera Diblokir Browser:</strong>
-          <p style="margin: 4px 0 8px 0;">Google Chrome membatasi video kamera jika dibuka lewat <code>file:///</code> offline. Gunakan tombol foto di bawah:</p>
-          <button type="button" class="btn-add-item" id="btnSnapFallback" style="width: 100%; font-size: 0.85rem; padding: 8px;">
-            📸 Ambil Foto Barcode
-          </button>
-        </div>
-
-        <div id="reader"></div>
-        <p id="readerHint" style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
-          Posisikan barcode produk di dalam kotak scan
-        </p>
-
-        <input type="file" id="camFileInput" accept="image/*" capture="environment" style="display: none;">
-
-        <div style="margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 10px; text-align: center;">
+      <div class="modal-body" style="font-size: 0.88rem; line-height: 1.5;">
+        <p style="margin-bottom: 10px;">Browser memblokir akses langsung stream video kamera (karena kendala izin browser/koneksi tanpa SSL).</p>
+        <p style="margin-bottom: 12px; color: var(--text-muted);">Gunakan mode foto bawaan perangkat Anda di bawah ini:</p>
+        <input type="file" id="cameraSnapInput" accept="image/*" capture="environment" style="display: none;">
+        <div style="text-align: center;">
           <button type="button" class="btn-preview-txt" id="btnTriggerSnap" style="width: 100%;">
             📸 Mode Foto Barcode (Kamera Bawaan HP)
           </button>
@@ -245,7 +255,7 @@
     </div>
   </div>
 
-  <!-- Modal Smart Download (Pilihan Rak Susulan vs Semua) -->
+  <!-- MODAL 3: SMART DOWNLOAD (SUSULAN vs LENGKAP) -->
   <div class="modal-overlay" id="modalSmartDownload">
     <div class="modal-box">
       <div class="modal-header">
@@ -291,7 +301,7 @@
     </div>
   </div>
 
-  <!-- Modal Post Download (Konfirmasi Selesai / Mulai Rak Baru) -->
+  <!-- MODAL 4: POST DOWNLOAD -->
   <div class="modal-overlay" id="modalPostDownload">
     <div class="modal-box" style="max-width: 460px;">
       <div class="modal-header">
@@ -322,9 +332,9 @@
     </div>
   </div>
 
-  <!-- Modal Riwayat Arsip Dokumen Stock Opname -->
+  <!-- MODAL 5: RIWAYAT ARSIP DOKUMEN SO -->
   <div class="modal-overlay" id="modalArchive">
-    <div class="modal-box" style="max-width: 650px;">
+    <div class="modal-box" style="max-width: 550px;">
       <div class="modal-header">
         <div>
           <span>📁 Riwayat Arsip Dokumen Stock Opname</span>
@@ -348,6 +358,139 @@
           🗑️ Bersihkan Arsip Lama
         </button>
         <button type="button" class="btn-preview-txt" id="btnCloseArchiveBottom">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: REGISTRASI & KELOLA MASTER RAK SO -->
+  <div class="modal-overlay" id="modalManageRacks">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <div>
+          <span>📋 Registrasi Master Rak SO</span>
+          <div style="font-size: 0.74rem; color: #0284c7; font-weight: 700;">Daftar Nomor Rak Resmi (Cegah Salah Ketik)</div>
+        </div>
+        <button class="modal-close" id="btnCloseManageRacks">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 0.82rem; color: #1e40af; line-height: 1.4;">
+          <strong>🛡️ Aturan Keamanan SO:</strong> Hanya rak yang didaftarkan di sini yang diizinkan untuk di-scan. Jika petugas mengetik nomor rak lain (misal: <code>AA/101</code>), sistem akan <strong>menolak</strong>.
+        </div>
+
+        <!-- 1. Generator Range Rak Cepat (Contoh AA/001 s/d AA/100) -->
+        <div class="racks-card-box">
+          <div class="racks-card-title">⚡ Buat Rentang Rak Cepat (Contoh: AA/001 s/d AA/100)</div>
+          <div class="range-grid">
+            <div class="form-group">
+              <label>Awalan / Prefix</label>
+              <input type="text" id="genRackPrefix" class="form-control" value="AA/" placeholder="Contoh: AA/ atau D">
+            </div>
+            <div class="form-group">
+              <label>Format Angka</label>
+              <select id="genRackDigits" class="form-control">
+                <option value="3" selected>3 Digit (001, 002...)</option>
+                <option value="2">2 Digit (01, 02...)</option>
+                <option value="1">1 Digit (1, 2...)</option>
+                <option value="4">4 Digit (0001...)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nomor Mulai</label>
+              <input type="number" id="genRackStart" class="form-control" value="1" min="1">
+            </div>
+            <div class="form-group">
+              <label>Nomor Selesai</label>
+              <input type="number" id="genRackEnd" class="form-control" value="100" min="1">
+            </div>
+          </div>
+          <button type="button" class="btn-primary-action" id="btnGenerateRange">
+            ⚡ Tambahkan Rentang Rak ke Master
+          </button>
+        </div>
+
+        <!-- 2. Tambah / Paste Rak Manual -->
+        <div class="racks-card-box" style="margin-top: 12px;">
+          <div class="racks-card-title">✍️ Tambah / Paste Rak Manual</div>
+          <textarea id="txtManualRacks" class="form-control" rows="2" placeholder="Ketik atau paste nomor rak (pisahkan koma/baris baru, misal: AA/001, AA/002, D001)"></textarea>
+          <button type="button" class="btn-secondary-action" id="btnAddManualRacks" style="margin-top: 8px;">
+            ➕ Tambahkan ke Daftar
+          </button>
+        </div>
+
+        <!-- 3. Daftar Rak Terdaftar Saat Ini -->
+        <div class="racks-card-box" style="margin-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="racks-card-title" style="margin: 0;">
+              Rak Terdaftar: <span id="countRegisteredRacks" class="badge-count">0</span>
+            </div>
+            <button type="button" class="btn-danger-small" id="btnClearAllRacks">
+              🗑️ Hapus Semua Rak
+            </button>
+          </div>
+          <div class="registered-racks-cloud" id="cloudRegisteredRacks"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-download-txt" id="btnSaveManageRacks" style="width: 100%;">
+          ✓ Selesai & Terapkan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 7: PILIH / GANTI RAK DARI DAFTAR TERDAFTAR -->
+  <div class="modal-overlay" id="modalSelectRack">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <div>
+          <span>Pilih Nomor Rak SO</span>
+          <div style="font-size: 0.74rem; color: #d97706; font-weight: 700;">Hanya Rak Resmi Terdaftar yang Bisa Dipilih</div>
+        </div>
+        <button class="modal-close" id="btnCloseSelectRack">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label>Cari atau Ketik Nomor Rak:</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="inputFilterRack" class="form-control rack-highlight" placeholder="Ketik nomor rak (misal AA/005)...">
+            <button type="button" class="btn-primary-action" id="btnConfirmCustomRack" style="width: auto; padding: 0 16px; white-space: nowrap;">
+              Pilih
+            </button>
+          </div>
+        </div>
+
+        <div style="font-size: 0.76rem; font-weight: 800; color: #64748b; margin-top: 10px;">
+          Klik salah satu rak terdaftar di bawah ini:
+        </div>
+        <div class="rack-select-quick" id="rackSelectContainer">
+          <!-- Clickable registered racks -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 8: PERINGATAN RAK DITOLAK (STRICT REJECTION) -->
+  <div class="modal-overlay" id="modalRackRejected">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header error-header">
+        <span>⛔ NOMOR RAK TIDAK TERDAFTAR</span>
+        <button class="modal-close" id="btnCloseRackRejected">✕</button>
+      </div>
+      <div class="modal-body" style="text-align: center; padding: 18px 14px;">
+        <div style="font-size: 42px; margin-bottom: 8px;">🚫</div>
+        <div id="rejectedRackName" style="color: #dc2626; font-size: 1.4rem; font-weight: 900; margin-bottom: 8px; letter-spacing: 0.5px;">AA/101</div>
+        <p style="color: #334155; font-size: 0.88rem; line-height: 1.45; margin-bottom: 12px;">
+          Nomor rak di atas <strong>DITOLAK</strong> oleh sistem karena tidak ditemukan dalam Master Daftar Rak Resmi SO.<br>
+          Petugas <strong>dilarang mengetik nomor rak asal</strong> untuk mencegah salah hitung data.
+        </p>
+        <div style="background: #fef2f2; border: 1.5px dashed #fca5a5; border-radius: 8px; padding: 10px; font-size: 0.8rem; color: #991b1b; text-align: left;">
+          💡 <strong>Solusi:</strong> Periksa kembali label fisik rak atau klik menu <strong>📋 Daftarkan Rak</strong> jika nomor rak tersebut merupakan rak baru yang sah.
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: center;">
+        <button type="button" class="btn-primary-action" id="btnDismissRackRejected" style="background: #dc2626; max-width: 180px;">
+          Saya Mengerti
+        </button>
       </div>
     </div>
   </div>
