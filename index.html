@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ITX PDT Stock Opname Scanner</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#091e3a">
+  <link rel="stylesheet" href="style.css">
+  <script src="html5-qrcode.min.js"></script>
+  <script src="so_data.js"></script>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-title">
+        <span>📦 PDT OPNAME</span>
+        <span class="brand-badge">SO TXT</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="btnOpenArchive" title="Riwayat & Arsip Dokumen SO">📁</button>
+        <button class="icon-btn" id="btnResetSession" title="Reset / Mulai Sesi Baru">🔄</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    
+    <!-- Header / Parameters Card -->
+    <div class="card" id="headerCard">
+      <div class="card-header" id="btnToggleHeader">
+        <span>⚙️ Parameter Dokumen Stock Opname</span>
+        <span id="headerToggleIcon">▼ Sembunyikan</span>
+      </div>
+      <div class="card-body" id="headerCardBody">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Tanggal SO (YYYYMMDD)</label>
+            <input type="date" id="inputDate" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Nama User Pelaksana SO</label>
+            <input type="text" id="inputUserSo" class="form-control user-highlight" placeholder="Contoh: SUKRON..." value="SUKRON" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <!-- INPUT LOKASI TOKO (MANUAL / KETIK NAMA/KODE) -->
+          <div class="form-group" style="position: relative;">
+            <label>Lokasi Toko / Gudang (Ketik Kode / Nama)</label>
+            <input type="text" id="inputLokToko" class="form-control" placeholder="Ketik kode 58015 / nama toko..." value="58015" autocomplete="off">
+            <div id="badgeLokToko" class="lokasi-verified-badge">🏬 58015 - HERO KIDS GUDANG BEKASI</div>
+            <div id="suggestLokToko" class="suggest-box" style="display: none;"></div>
+          </div>
+
+          <!-- INPUT NOMOR RAK / AREA AKTIF -->
+          <div class="form-group">
+            <label>Nomor Rak / Area Display</label>
+            <div class="rack-row">
+              <input type="text" id="inputKodeRak" class="form-control rack-highlight" value="D001" placeholder="D001">
+              <button class="btn-new-rack" id="btnNewRack">+ Rak Baru</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>No. Device / PDT (dc_...)</label>
+            <input type="text" id="inputDeviceId" class="form-control" value="1" placeholder="1">
+          </div>
+          <div class="form-group">
+            <label>No. Lembar / Dokumen SO</label>
+            <input type="text" id="inputDocBatch" class="form-control" value="12814" placeholder="12814">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Scanner Box with Explicit QTY Input -->
+    <div class="scan-box-wrapper">
+      
+      <div class="scan-grid-main">
+        <!-- ISIAN MANUAL QTY -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="color: #0369a1; font-size: 0.75rem; font-weight: 800;">QTY HITUNG</label>
+          <div class="qty-control-box">
+            <button type="button" class="qty-btn-touch" id="btnQtyTouchMinus">−</button>
+            <input type="number" id="inputMainQty" class="input-qty-number" value="1" min="0.01" step="any" placeholder="1">
+            <button type="button" class="qty-btn-touch" id="btnQtyTouchPlus">+</button>
+          </div>
+        </div>
+
+        <!-- INPUT SCAN BARCODE / PLU -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="color: #0369a1; font-size: 0.75rem; font-weight: 800;">SCAN BARCODE / PLU</label>
+          <div class="scan-input-group">
+            <input type="text" id="inputScanCode" class="scan-input" placeholder="Scan Barcode / PLU..." autocomplete="off" autofocus>
+            <button class="scan-cam-btn" id="btnOpenCam" title="Buka Kamera HP">📷</button>
+            <div class="suggest-box" id="suggestBox" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Item Display (Shows immediately as user types or scans) -->
+      <div id="liveItemCard" class="live-item-card">
+        <div class="live-item-icon" id="liveItemIcon">📦</div>
+        <div class="live-item-body">
+          <div class="live-item-title" id="liveItemName">Nama barang akan otomatis muncul di sini...</div>
+          <div class="live-item-sub" id="liveItemMeta">Ketik atau tembak barcode kemasan / PLU barang di atas</div>
+        </div>
+      </div>
+
+      <!-- Quick Qty Shortcut Buttons -->
+      <div class="quick-qty-container">
+        <span class="quick-qty-label">Qty Cepat:</span>
+        <button type="button" class="qty-chip" data-qty="1">1</button>
+        <button type="button" class="qty-chip" data-qty="2">2</button>
+        <button type="button" class="qty-chip" data-qty="5">5</button>
+        <button type="button" class="qty-chip" data-qty="10">10</button>
+        <button type="button" class="qty-chip" data-qty="12">12</button>
+        <button type="button" class="qty-chip" data-qty="24">24</button>
+        <button type="button" class="qty-chip" data-qty="50">50</button>
+        <button type="button" class="qty-chip" data-qty="100">100</button>
+      </div>
+
+      <!-- Manual Submit Button -->
+      <div style="margin-top: 10px;">
+        <button type="button" class="btn-add-item" id="btnManualSubmit" style="width: 100%;">
+          ➕ TAMBAH ITEM KE RAK (ENTER)
+        </button>
+      </div>
+
+      <!-- Item Preview Box (when item is confirmed) -->
+      <div class="item-preview" id="itemPreview" style="display: none;">
+        <div class="item-preview-name" id="previewItemName">-</div>
+        <div class="item-preview-meta" id="previewItemMeta">-</div>
+        <div class="qty-control-row">
+          <button class="qty-step-btn" id="btnStepMinus">-</button>
+          <input type="number" id="previewQty" class="qty-field" value="1" min="1">
+          <button class="qty-step-btn" id="btnStepPlus">+</button>
+          <button class="btn-add-item" id="btnAddItem">SIMPAN ITEM</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Summary Bar -->
+    <div class="summary-bar">
+      <div class="summary-box">
+        <div class="summary-box-label">Total Baris</div>
+        <div class="summary-box-val" id="totalLines">0</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-label">Total QTY</div>
+        <div class="summary-box-val" id="totalQty">0.00</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-label">Rak Aktif</div>
+        <div class="summary-box-val" id="activeRackDisplay" style="color: #b45309;">-</div>
+      </div>
+    </div>
+    
+    <!-- Status Rak Susulan Banner -->
+    <div id="bannerSusulan" style="display:none; background:#eff6ff; border:1.5px solid #93c5fd; border-radius:10px; padding:8px 12px; margin-bottom:12px; font-size:0.85rem; color:#1e40af; align-items:center; justify-content:space-between;">
+      <div>
+        <strong>📦 Info Opname:</strong> <span id="bannerSusulanText">-</span>
+      </div>
+    </div>
+
+    <!-- Scanned Items List -->
+    <div class="item-list" id="scannedItemList"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState">
+      <div style="font-size: 2.8rem; margin-bottom: 8px;">📋</div>
+      <div style="font-weight: 800; font-size: 1.05rem;">Belum ada barang di-scan untuk Stock Opname</div>
+      <div style="font-size: 0.82rem; margin-top: 4px;">Pilih Rak, tentukan QTY, lalu tembak barcode barang dengan laser Honeywell atau kamera.</div>
+    </div>
+
+  </main>
+
+  <!-- Fixed Bottom Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-inner">
+      <button type="button" class="btn-preview-txt" id="btnPreviewTxt">
+        👁️ Preview
+      </button>
+      <button type="button" class="btn-download-txt" id="btnDownloadTxt">
+        💾 DOWNLOAD TXT (OPNAME)
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Preview TXT File -->
+  <div class="modal-overlay" id="modalPreview">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <span>Isi File Stock Opname (.TXT)</span>
+          <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700;" id="previewFilenameDisplay">-</div>
+        </div>
+        <button class="modal-close" id="btnClosePreview">✕</button>
+      </div>
+      <div class="modal-body">
+        <pre id="txtPreviewArea" style="background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 8px; font-size: 0.74rem; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 50vh; overflow-y: auto;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-preview-txt" id="btnCopyPreview">📋 Salin Teks</button>
+        <button type="button" class="btn-download-txt" id="btnDownloadFromPreview">💾 Unduh TXT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Camera Scanner -->
+  <div class="modal-overlay" id="modalCam">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>📸 Kamera Scanner Barcode</span>
+        <button class="modal-close" id="btnCloseCam">✕</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <div id="camAlertDenied" style="display: none; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; font-size: 0.85rem; color: #92400e;">
+          <strong>⚠️ Izin Kamera Diblokir Browser:</strong>
+          <p style="margin: 4px 0 8px 0;">Google Chrome membatasi video kamera jika dibuka lewat <code>file:///</code> offline. Gunakan tombol foto di bawah:</p>
+          <button type="button" class="btn-add-item" id="btnSnapFallback" style="width: 100%; font-size: 0.85rem; padding: 8px;">
+            📸 Ambil Foto Barcode
+          </button>
+        </div>
+
+        <div id="reader"></div>
+        <p id="readerHint" style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+          Posisikan barcode produk di dalam kotak scan
+        </p>
+
+        <input type="file" id="camFileInput" accept="image/*" capture="environment" style="display: none;">
+
+        <div style="margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 10px; text-align: center;">
+          <button type="button" class="btn-preview-txt" id="btnTriggerSnap" style="width: 100%;">
+            📸 Mode Foto Barcode (Kamera Bawaan HP)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Smart Download (Pilihan Rak Susulan vs Semua) -->
+  <div class="modal-overlay" id="modalSmartDownload">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <span>Pilihan Download File Opname</span>
+          <div style="font-size: 0.75rem; color: #d97706; font-weight: 700;">Mencegah Dobel Upload di Sistem Kantor</div>
+        </div>
+        <button class="modal-close" id="btnCloseSmartDl">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 12px; margin-bottom: 14px; font-size: 0.88rem;">
+          <div style="font-weight: 800; color: #92400e; margin-bottom: 4px;">⚠️ Terdeteksi Rak Susulan / Barang Tambahan:</div>
+          <div style="color: #78350f; font-size: 0.85rem; line-height: 1.4;">
+            • <strong><span id="cntDownloaded">0</span> barang</strong> sudah pernah diunduh pada file sebelumnya.<br>
+            • <strong><span id="cntNew">0</span> barang baru (susulan)</strong> belum pernah diunduh.
+          </div>
+        </div>
+
+        <div class="choice-card-option recommended">
+          <div style="font-weight: 800; color: #15803d; font-size: 0.95rem;">
+            Pilihan 1: Download HANYA Barang / Rak Susulan (Disarankan)
+          </div>
+          <p style="font-size: 0.82rem; color: #166534; margin: 4px 0 10px 0; line-height: 1.35;">
+            Gunakan pilihan ini jika file pertama tadi <strong>SUDAH di-upload</strong> ke sistem kantor, agar opname lama <strong>TIDAK DOBEL</strong>!
+          </p>
+          <button type="button" class="btn-download-txt" id="btnDlOnlyNew" style="width: 100%; background: #16a34a;">
+            ⚡ DOWNLOAD DATA SUSULAN (<span id="btnNewCnt">0</span> Item)
+          </button>
+        </div>
+
+        <div class="choice-card-option secondary">
+          <div style="font-weight: 800; color: #334155; font-size: 0.95rem;">
+            Pilihan 2: Download Gabungan Semua Barang
+          </div>
+          <p style="font-size: 0.82rem; color: #64748b; margin: 4px 0 10px 0; line-height: 1.35;">
+            Gunakan pilihan ini jika file pertama tadi <strong>BELUM di-upload / dibatalkan</strong>, sehingga 1 file ini memuat seluruh rak lengkap dari awal.
+          </p>
+          <button type="button" class="btn-preview-txt" id="btnDlAllMerged" style="width: 100%;">
+            📦 DOWNLOAD GABUNGAN SEMUA (<span id="btnAllCnt">0</span> Item)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Post Download (Konfirmasi Selesai / Mulai Rak Baru) -->
+  <div class="modal-overlay" id="modalPostDownload">
+    <div class="modal-box" style="max-width: 460px;">
+      <div class="modal-header">
+        <span>🎉 File SO Berhasil Diunduh!</span>
+        <button class="modal-close" id="btnClosePostDl">✕</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <div style="font-size: 2.8rem; margin: 6px 0;">📄</div>
+        <div style="font-weight: 800; font-size: 0.98rem; color: #0284c7; word-break: break-all;" id="postDlFilename">dc_1_op_...txt</div>
+        <p style="font-size: 0.85rem; color: #64748b; margin: 6px 0 16px 0; line-height: 1.4;">
+          File sudah tersimpan di perangkat & otomatis tercatat di <strong>Riwayat Arsip SO (📁)</strong>.
+        </p>
+
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: left; font-size: 0.85rem;">
+          <strong style="color: #0f172a; display: block; margin-bottom: 4px;">Pilihan Selanjutnya:</strong>
+          • <strong>Mulai Sesi Baru</strong>: Layar scan dikosongkan untuk lembar SO berikutnya (data tadi tetap aman di menu Arsip 📁).<br>
+          • <strong>Tetap di Sini</strong>: Jika masih ingin memeriksa atau menambah barang.
+        </div>
+      </div>
+      <div class="modal-footer" style="flex-direction: column; gap: 8px;">
+        <button type="button" class="btn-download-txt" id="btnArchiveAndClear" style="width: 100%; background: #16a34a;">
+          🧹 Mulai Sesi Baru (Kosongkan Layar)
+        </button>
+        <button type="button" class="btn-preview-txt" id="btnKeepSession" style="width: 100%;">
+          📦 Tetap Simpan di Sini
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Riwayat Arsip Dokumen Stock Opname -->
+  <div class="modal-overlay" id="modalArchive">
+    <div class="modal-box" style="max-width: 650px;">
+      <div class="modal-header">
+        <div>
+          <span>📁 Riwayat Arsip Dokumen Stock Opname</span>
+          <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">Data Aman & Bisa Diunduh Ulang Kapan Saja</div>
+        </div>
+        <button class="modal-close" id="btnCloseArchive">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="inputSearchArchive" class="form-control" placeholder="🔍 Cari file / toko / pelaksana / rak di arsip..." style="margin-bottom: 12px;">
+        
+        <div id="archiveListContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        
+        <div id="emptyArchiveState" style="text-align: center; padding: 30px 16px; color: var(--text-muted); display: none;">
+          <div style="font-size: 2.2rem; margin-bottom: 6px;">📂</div>
+          <div style="font-weight: 700;">Belum ada arsip dokumen Stock Opname</div>
+          <div style="font-size: 0.82rem; margin-top: 2px;">Dokumen SO yang di-download akan otomatis tercatat di sini.</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn-card-del" id="btnClearAllArchives" title="Bersihkan Seluruh Arsip Lama" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 700;">
+          🗑️ Bersihkan Arsip Lama
+        </button>
+        <button type="button" class="btn-preview-txt" id="btnCloseArchiveBottom">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
