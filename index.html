@@ -6,9 +6,9 @@
   <title>ITX PDT Stock Opname Scanner</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#091e3a">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261028_1730">
   <script src="html5-qrcode.min.js"></script>
-  <script src="so_data.js"></script>
+  <script src="so_data.js?v=20261028_1730"></script>
 </head>
 <body>
 
@@ -27,6 +27,12 @@
   </header>
 
   <main class="container">
+
+    <!-- Master Database Live Status Banner -->
+    <div id="dbStatusBar" class="db-status-bar" style="margin-bottom: 10px; padding: 7px 12px; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #065f46; display: flex; align-items: center; justify-content: space-between;">
+      <span>✅ Database Master Aktif</span>
+      <span id="dbDetailStats" style="font-size: 0.72rem; color: #047857;">133.467 Produk | 65 Rak Resmi</span>
+    </div>
     
     <!-- Header / Parameters Card -->
     <div class="card" id="headerCard">
@@ -40,36 +46,40 @@
             <label>Tanggal SO (YYYYMMDD)</label>
             <input type="date" id="inputDate" class="form-control">
           </div>
-          <div class="form-group">
-            <label>Nama User Pelaksana SO</label>
-            <input type="text" id="inputUserSo" class="form-control user-highlight" placeholder="Contoh: SUKRON..." value="SUKRON" autocomplete="off">
+          <!-- INPUT LOKASI TOKO / GUDANG -->
+          <div class="form-group" style="position: relative;">
+            <label>Toko / Gudang</label>
+            <input type="text" id="inputLokToko" class="form-control" placeholder="Ketik kode 55022 / nama gudang..." value="55022" autocomplete="off">
+            <div id="badgeLokToko" class="lokasi-verified-badge">🏬 55022 - ITX GUDANG NAROGONG (X22)</div>
+            <div id="suggestLokToko" class="suggest-box" style="display: none;"></div>
           </div>
         </div>
 
         <div class="form-grid">
-          <!-- INPUT LOKASI TOKO / GUDANG -->
-          <div class="form-group" style="position: relative;">
-            <label>Toko / Gudang</label>
-            <input type="text" id="inputLokToko" class="form-control" placeholder="Ketik kode / nama toko atau gudang..." value="58015" autocomplete="off">
-            <div id="badgeLokToko" class="lokasi-verified-badge">🏬 58015 - HERO KIDS GUDANG BEKASI</div>
-            <div id="suggestLokToko" class="suggest-box" style="display: none;"></div>
-          </div>
-
-          <!-- INPUT NOMOR RAK / AREA AKTIF (STRICT VALIDATION) -->
+          <!-- INPUT NOMOR RAK / AREA AKTIF (DARI RAK.DBF) -->
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label style="margin: 0;">Nomor Rak Aktif</label>
+              <label style="margin: 0;">Nomor Rak (RAK.DBF)</label>
               <button type="button" class="btn-manage-racks" id="btnOpenManageRacks" title="Kelola / Daftarkan Daftar Rak SO">
                 📋 Daftarkan Rak
               </button>
             </div>
             <div class="rack-row">
-              <input type="text" id="inputKodeRak" class="form-control rack-highlight" list="listRegisteredRacks" value="AA/001" placeholder="Pilih / Ketik Rak..." autocomplete="off">
+              <input type="text" id="inputKodeRak" class="form-control rack-highlight" list="listRegisteredRacks" value="AB/001" placeholder="Pilih / Ketik Rak..." autocomplete="off">
               <datalist id="listRegisteredRacks"></datalist>
               <button type="button" class="btn-new-rack" id="btnNewRack" title="Ganti ke Rak Terdaftar">+ Ganti Rak</button>
             </div>
             <div id="rackValidationStatus" class="rack-status-badge valid">
-              ✓ Rak Terdaftar Sah (AA/001)
+              ✓ Rak Sah: AB/001 | Peserta: YONO (Pendamping: DENNI)
+            </div>
+          </div>
+
+          <!-- USER PESERTA & PENDAMPING (OTOMATIS DARI RAK.DBF) -->
+          <div class="form-group">
+            <label>Peserta SO (Pelaksana)</label>
+            <input type="text" id="inputUserSo" class="form-control user-highlight" placeholder="Nama Peserta..." value="YONO" autocomplete="off">
+            <div style="margin-top: 4px; font-size: 0.76rem; color: #64748b; font-weight: 700;">
+              Pendamping: <span id="displayPendamping" style="color: #0369a1; font-weight: 800;">DENNI</span>
             </div>
           </div>
         </div>
@@ -116,11 +126,11 @@
         </div>
       </div>
 
-      <!-- 2. KOTAK SCAN BARCODE / PLU (DI BAWAH QTY) -->
+      <!-- 2. KOTAK SCAN BARCODE / PLU / ARTICLE (DI BAWAH QTY) -->
       <div class="scan-section-box">
-        <label class="scan-title-label">SCAN BARCODE / PLU BARANG</label>
+        <label class="scan-title-label">SCAN BARCODE / PLU / ARTICLE (KODE ITEM)</label>
         <div class="scan-input-group">
-          <input type="text" id="inputScanCode" class="scan-input" placeholder="Tembak Barcode / Ketik PLU..." autocomplete="off" autofocus>
+          <input type="text" id="inputScanCode" class="scan-input" placeholder="Tembak Barcode / Ketik PLU / Article 68612..." autocomplete="off" autofocus>
           <button type="button" class="scan-cam-btn" id="btnOpenCam" title="Buka Kamera HP">📷</button>
           <div class="suggest-box" id="suggestBox" style="display: none;"></div>
         </div>
@@ -131,7 +141,7 @@
         <div class="live-item-icon" id="liveItemIcon">📦</div>
         <div class="live-item-body">
           <div class="live-item-title" id="liveItemName">Nama barang akan otomatis muncul di sini...</div>
-          <div class="live-item-sub" id="liveItemMeta">Ketik atau tembak barcode kemasan / PLU barang di atas</div>
+          <div class="live-item-sub" id="liveItemMeta">Ketik atau tembak barcode kemasan / PLU / Article di atas</div>
         </div>
       </div>
 
@@ -174,7 +184,7 @@
         <div class="stat-lbl">Total QTY</div>
       </div>
       <div class="stat-box">
-        <div class="stat-val active-rack" id="activeRackDisplay">AA/001</div>
+        <div class="stat-val active-rack" id="activeRackDisplay">AB/001</div>
         <div class="stat-lbl">Rak Aktif</div>
       </div>
     </div>
@@ -368,22 +378,22 @@
       <div class="modal-header">
         <div>
           <span>📋 Registrasi Master Rak SO</span>
-          <div style="font-size: 0.74rem; color: #0284c7; font-weight: 700;">Daftar Nomor Rak Resmi (Cegah Salah Ketik)</div>
+          <div style="font-size: 0.74rem; color: #0284c7; font-weight: 700;">Daftar Nomor Rak Resmi (RAK.DBF)</div>
         </div>
         <button class="modal-close" id="btnCloseManageRacks">✕</button>
       </div>
       <div class="modal-body">
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 0.82rem; color: #1e40af; line-height: 1.4;">
-          <strong>🛡️ Aturan Keamanan SO:</strong> Hanya rak yang didaftarkan di sini yang diizinkan untuk di-scan. Jika petugas mengetik nomor rak lain (misal: <code>AA/101</code>), sistem akan <strong>menolak</strong>.
+          <strong>🛡️ Aturan Keamanan SO:</strong> Hanya rak yang didaftarkan di sini (dari file <code>RAK.DBF</code>) yang sah untuk di-scan. Jika petugas mengetik nomor rak lain, sistem akan <strong>menolak</strong>.
         </div>
 
-        <!-- 1. Generator Range Rak Cepat (Contoh AA/001 s/d AA/100) -->
+        <!-- 1. Generator Range Rak Cepat -->
         <div class="racks-card-box">
-          <div class="racks-card-title">⚡ Buat Rentang Rak Cepat (Contoh: AA/001 s/d AA/100)</div>
+          <div class="racks-card-title">⚡ Buat Rentang Rak Tambahan</div>
           <div class="range-grid">
             <div class="form-group">
               <label>Awalan / Prefix</label>
-              <input type="text" id="genRackPrefix" class="form-control" value="AA/" placeholder="Contoh: AA/ atau D">
+              <input type="text" id="genRackPrefix" class="form-control" value="AB/" placeholder="Contoh: AB/ atau D">
             </div>
             <div class="form-group">
               <label>Format Angka</label>
@@ -400,7 +410,7 @@
             </div>
             <div class="form-group">
               <label>Nomor Selesai</label>
-              <input type="number" id="genRackEnd" class="form-control" value="100" min="1">
+              <input type="number" id="genRackEnd" class="form-control" value="65" min="1">
             </div>
           </div>
           <button type="button" class="btn-primary-action" id="btnGenerateRange">
@@ -411,7 +421,7 @@
         <!-- 2. Tambah / Paste Rak Manual -->
         <div class="racks-card-box" style="margin-top: 12px;">
           <div class="racks-card-title">✍️ Tambah / Paste Rak Manual</div>
-          <textarea id="txtManualRacks" class="form-control" rows="2" placeholder="Ketik atau paste nomor rak (pisahkan koma/baris baru, misal: AA/001, AA/002, D001)"></textarea>
+          <textarea id="txtManualRacks" class="form-control" rows="2" placeholder="Ketik atau paste nomor rak (misal: AB/001, AB/002)"></textarea>
           <button type="button" class="btn-secondary-action" id="btnAddManualRacks" style="margin-top: 8px;">
             ➕ Tambahkan ke Daftar
           </button>
@@ -424,7 +434,7 @@
               Rak Terdaftar: <span id="countRegisteredRacks" class="badge-count">0</span>
             </div>
             <button type="button" class="btn-danger-small" id="btnClearAllRacks">
-              🗑️ Hapus Semua Rak
+              🗑️ Reset ke Default RAK.DBF
             </button>
           </div>
           <div class="registered-racks-cloud" id="cloudRegisteredRacks"></div>
@@ -443,7 +453,7 @@
     <div class="modal-box" style="max-width: 480px;">
       <div class="modal-header">
         <div>
-          <span>Pilih Nomor Rak SO</span>
+          <span>Pilih Nomor Rak SO (RAK.DBF)</span>
           <div style="font-size: 0.74rem; color: #d97706; font-weight: 700;">Hanya Rak Resmi Terdaftar yang Bisa Dipilih</div>
         </div>
         <button class="modal-close" id="btnCloseSelectRack">✕</button>
@@ -452,7 +462,7 @@
         <div class="form-group" style="margin-bottom: 8px;">
           <label>Cari atau Ketik Nomor Rak:</label>
           <div style="display: flex; gap: 6px;">
-            <input type="text" id="inputFilterRack" class="form-control rack-highlight" placeholder="Ketik nomor rak (misal AA/005)...">
+            <input type="text" id="inputFilterRack" class="form-control rack-highlight" placeholder="Ketik nomor rak (misal AB/001)...">
             <button type="button" class="btn-primary-action" id="btnConfirmCustomRack" style="width: auto; padding: 0 16px; white-space: nowrap;">
               Pilih
             </button>
@@ -460,7 +470,7 @@
         </div>
 
         <div style="font-size: 0.76rem; font-weight: 800; color: #64748b; margin-top: 10px;">
-          Klik salah satu rak terdaftar di bawah ini:
+          Klik salah satu rak resmi dari RAK.DBF di bawah ini:
         </div>
         <div class="rack-select-quick" id="rackSelectContainer">
           <!-- Clickable registered racks -->
@@ -480,11 +490,11 @@
         <div style="font-size: 42px; margin-bottom: 8px;">🚫</div>
         <div id="rejectedRackName" style="color: #dc2626; font-size: 1.4rem; font-weight: 900; margin-bottom: 8px; letter-spacing: 0.5px;">AA/101</div>
         <p style="color: #334155; font-size: 0.88rem; line-height: 1.45; margin-bottom: 12px;">
-          Nomor rak di atas <strong>DITOLAK</strong> oleh sistem karena tidak ditemukan dalam Master Daftar Rak Resmi SO.<br>
+          Nomor rak di atas <strong>DITOLAK</strong> oleh sistem karena tidak ditemukan dalam Master Daftar Rak Resmi SO (<code>RAK.DBF</code>).<br>
           Petugas <strong>dilarang mengetik nomor rak asal</strong> untuk mencegah salah hitung data.
         </p>
         <div style="background: #fef2f2; border: 1.5px dashed #fca5a5; border-radius: 8px; padding: 10px; font-size: 0.8rem; color: #991b1b; text-align: left;">
-          💡 <strong>Solusi:</strong> Periksa kembali label fisik rak atau klik menu <strong>📋 Daftarkan Rak</strong> jika nomor rak tersebut merupakan rak baru yang sah.
+          💡 <strong>Solusi:</strong> Pilih nomor rak resmi yang tersedia di tombol <strong>+ Ganti Rak</strong> atau periksa kembali label rak fisik Anda.
         </div>
       </div>
       <div class="modal-footer" style="justify-content: center;">
@@ -495,6 +505,6 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20261028_1730"></script>
 </body>
 </html>

@@ -97,9 +97,9 @@
 
   let state = {
     tanggal: '',
-    lokasiToko: '58015',
-    userSo: 'SUKRON',
-    kodeRak: 'AA/001',
+    lokasiToko: '55022',
+    userSo: 'YONO',
+    kodeRak: 'AB/001',
     deviceId: '1',
     docBatch: '12814',
     items: [],
@@ -160,12 +160,16 @@
 
   function checkRackPeserta(rackCode) {
     const info = getRackInfo(rackCode);
-    if (info && info.p && info.p.trim()) {
-      if (!state.userSo || state.userSo === 'SUKRON' || state.userSo === 'USER') {
+    if (info) {
+      if (info.p && info.p.trim()) {
         state.userSo = info.p.trim();
         if (elUserSo) elUserSo.value = state.userSo;
-        saveSession();
       }
+      const elPendamping = document.getElementById('displayPendamping');
+      if (elPendamping) {
+        elPendamping.textContent = info.d || '-';
+      }
+      saveSession();
     }
   }
 
@@ -173,12 +177,13 @@
     if (!database.racks || database.racks.length === 0) return;
     const dbRacks = database.racks.map(r => (typeof r === 'string' ? r : r.r).trim().toUpperCase());
     
-    // Always sync database.racks from RAK.DBF
+    // Always prioritize official racks from RAK.DBF
     state.registeredRacks = dbRacks;
     saveRegisteredRacks();
 
     if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
       state.kodeRak = state.registeredRacks[0];
+      if (elKodeRak) elKodeRak.value = state.kodeRak;
       saveSession();
     }
     checkRackPeserta(state.kodeRak);
@@ -294,30 +299,70 @@
     setTimeout(() => { t.classList.remove('show'); }, 2000);
   }
 
-  // --- Load Master DB ---
+  // --- Live Database Master Indicator ---
+  function updateDbStatusDisplay(ready) {
+    const elBar = document.getElementById('dbStatusBar');
+    const elStats = document.getElementById('dbDetailStats');
+    if (!elBar) return;
+    if (ready) {
+      elBar.className = 'db-status-bar ready';
+      elBar.style.background = '#ecfdf5';
+      elBar.style.borderColor = '#a7f3d0';
+      elBar.style.color = '#065f46';
+      const itCnt = database.items ? Object.keys(database.items).length : 0;
+      const rkCnt = database.racks ? database.racks.length : 0;
+      elBar.innerHTML = `<span>✅ Database Master Aktif</span><span id="dbDetailStats" style="font-size:0.72rem;color:#047857;">${itCnt.toLocaleString()} Produk | ${rkCnt} Rak Resmi</span>`;
+    } else {
+      elBar.className = 'db-status-bar loading';
+      elBar.style.background = '#fffbeb';
+      elBar.style.borderColor = '#fde68a';
+      elBar.style.color = '#92400e';
+      elBar.innerHTML = `<span>⏳ Sedang Menyiapkan Database Master...</span>`;
+    }
+  }
+
+  function applyDatabaseReady(data) {
+    database = data;
+    if (!database.barcodes) database.barcodes = {};
+    if (!database.articles) database.articles = {};
+    if (database.racks && database.racks.length > 0) {
+      syncRacksFromDatabase();
+    }
+    updateLocationBadge();
+    updateDbStatusDisplay(true);
+    updateRackUI();
+    renderUI();
+  }
+
+  // --- Load Master DB (Fast Poll & Bulletproof Fallback) ---
   function initDatabase() {
     if (window.PDT_DATABASE && window.PDT_DATABASE.items) {
-      database = window.PDT_DATABASE;
-      if (!database.barcodes) database.barcodes = {};
-      if (database.racks && database.racks.length > 0) {
-        syncRacksFromDatabase();
-      }
-      updateLocationBadge();
-    } else {
-      fetch('so_data.json')
-        .then(res => res.json())
-        .then(data => {
-          database = data;
-          if (!database.barcodes) database.barcodes = {};
-          if (database.racks && database.racks.length > 0) {
-            syncRacksFromDatabase();
-          }
-          updateLocationBadge();
-        })
-        .catch(err => {
-          showToast('Database so_data.json tidak termuat!', true);
-        });
+      applyDatabaseReady(window.PDT_DATABASE);
+      return;
     }
+
+    updateDbStatusDisplay(false);
+
+    // Poll every 150ms for window.PDT_DATABASE
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (window.PDT_DATABASE && window.PDT_DATABASE.items) {
+        clearInterval(interval);
+        applyDatabaseReady(window.PDT_DATABASE);
+      } else if (attempts > 30) {
+        clearInterval(interval);
+        fetch('so_data.json')
+          .then(res => res.json())
+          .then(data => {
+            applyDatabaseReady(data);
+          })
+          .catch(err => {
+            showToast('Database so_data.js tidak termuat!', true);
+            updateDbStatusDisplay(false);
+          });
+      }
+    }, 150);
   }
 
   // Lookup location by code or abbreviation
@@ -398,10 +443,19 @@
     }
 
     loadRegisteredRacks();
-    // Validate loaded rack
+    // Sanitize stale values from previous versions
+    if (state.lokasiToko === '58015') {
+      state.lokasiToko = '55022';
+    }
+    if (state.kodeRak === 'D001' || state.kodeRak === 'AA/001') {
+      if (state.registeredRacks.length > 0 && !state.registeredRacks.includes(state.kodeRak)) {
+        state.kodeRak = state.registeredRacks[0];
+      }
+    }
     if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
       state.kodeRak = state.registeredRacks[0];
     }
+    checkRackPeserta(state.kodeRak);
 
     elDate.value = state.tanggal;
     elLokToko.value = state.lokasiToko;
@@ -524,7 +578,7 @@
     }
   }
 
-  // --- Lookup Item (Barcode -> PLU -> Nama Barang & Article) ---
+  // --- Lookup Item (Barcode -> PLU -> Article / Kode Item -> Nama Barang) ---
   function lookupItem(code) {
     if (!code) return null;
     const cleanCode = code.trim().toUpperCase();
@@ -547,52 +601,69 @@
       }
     }
 
-    // 2. Check if code is directly a PLU in database.items
-    if (database.items[cleanCode]) {
-      const itemObj = database.items[cleanCode];
-      return {
-        plu: cleanCode,
-        name: itemObj.n || itemObj,
-        article: itemObj.a || '',
-        scannedCode: cleanCode,
-        fromBarcode: false
-      };
-    }
-    if (database.items[noSpace]) {
-      const itemObj = database.items[noSpace];
-      return {
-        plu: noSpace,
-        name: itemObj.n || itemObj,
-        article: itemObj.a || '',
-        scannedCode: cleanCode,
-        fromBarcode: false
-      };
+    // 2. Check if code is in database.articles (Article / Kode Item e.g. 68612 or ITTX-68612)
+    if (database.articles) {
+      const mappedPlu = database.articles[noSpace] || database.articles[cleanCode];
+      if (mappedPlu && database.items && database.items[mappedPlu]) {
+        const itemObj = database.items[mappedPlu];
+        return {
+          plu: mappedPlu,
+          name: itemObj.n || itemObj,
+          article: itemObj.a || cleanCode,
+          scannedCode: cleanCode,
+          fromBarcode: true
+        };
+      }
     }
 
-    // 3. Check padded/unpadded PLU digits
-    if (/^\d+$/.test(noSpace)) {
-      const padded = noSpace.padStart(7, '0');
-      if (database.items[padded]) {
-        const itemObj = database.items[padded];
+    // 3. Check if code is directly a PLU in database.items
+    if (database.items) {
+      if (database.items[cleanCode]) {
+        const itemObj = database.items[cleanCode];
         return {
-          plu: padded,
+          plu: cleanCode,
           name: itemObj.n || itemObj,
           article: itemObj.a || '',
           scannedCode: cleanCode,
           fromBarcode: false
         };
       }
-      const unpadded = noSpace.replace(/^0+/, '');
-      for (let k in database.items) {
-        if (k.replace(/^0+/, '') === unpadded) {
-          const itemObj = database.items[k];
+      if (database.items[noSpace]) {
+        const itemObj = database.items[noSpace];
+        return {
+          plu: noSpace,
+          name: itemObj.n || itemObj,
+          article: itemObj.a || '',
+          scannedCode: cleanCode,
+          fromBarcode: false
+        };
+      }
+
+      // Check padded 7-digit PLU
+      if (/^\d+$/.test(noSpace)) {
+        const padded = noSpace.padStart(7, '0');
+        if (database.items[padded]) {
+          const itemObj = database.items[padded];
           return {
-            plu: k,
+            plu: padded,
             name: itemObj.n || itemObj,
             article: itemObj.a || '',
             scannedCode: cleanCode,
             fromBarcode: false
           };
+        }
+        const unpadded = noSpace.replace(/^0+/, '');
+        for (let k in database.items) {
+          if (k.replace(/^0+/, '') === unpadded) {
+            const itemObj = database.items[k];
+            return {
+              plu: k,
+              name: itemObj.n || itemObj,
+              article: itemObj.a || '',
+              scannedCode: cleanCode,
+              fromBarcode: false
+            };
+          }
         }
       }
     }
