@@ -152,7 +152,46 @@
     return def;
   }
 
+  function getRackInfo(rackCode) {
+    if (!database || !database.racks) return null;
+    const clean = (rackCode || '').trim().toUpperCase();
+    return database.racks.find(r => (typeof r === 'string' ? r : r.r).toUpperCase() === clean) || null;
+  }
+
+  function checkRackPeserta(rackCode) {
+    const info = getRackInfo(rackCode);
+    if (info && info.p && info.p.trim()) {
+      if (!state.userSo || state.userSo === 'SUKRON' || state.userSo === 'USER') {
+        state.userSo = info.p.trim();
+        if (elUserSo) elUserSo.value = state.userSo;
+        saveSession();
+      }
+    }
+  }
+
+  function syncRacksFromDatabase() {
+    if (!database.racks || database.racks.length === 0) return;
+    const dbRacks = database.racks.map(r => (typeof r === 'string' ? r : r.r).trim().toUpperCase());
+    
+    // Always sync database.racks from RAK.DBF
+    state.registeredRacks = dbRacks;
+    saveRegisteredRacks();
+
+    if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
+      state.kodeRak = state.registeredRacks[0];
+      saveSession();
+    }
+    checkRackPeserta(state.kodeRak);
+    updateRackUI();
+  }
+
   function loadRegisteredRacks() {
+    // If database already loaded with racks from RAK.DBF, prioritize RAK.DBF
+    if (database && database.racks && database.racks.length > 0) {
+      state.registeredRacks = database.racks.map(r => (typeof r === 'string' ? r : r.r).trim().toUpperCase());
+      saveRegisteredRacks();
+      return;
+    }
     try {
       const raw = localStorage.getItem(RACKS_STORAGE_KEY);
       if (raw) {
@@ -194,8 +233,10 @@
     if (badgeEl) {
       const isValid = isRackValid(state.kodeRak);
       if (isValid) {
+        const info = getRackInfo(state.kodeRak);
+        const meta = (info && info.p) ? ` | Peserta: <strong>${info.p}</strong>${info.d ? ' (Pendamping: ' + info.d + ')' : ''}` : '';
         badgeEl.className = 'rack-status-badge valid';
-        badgeEl.innerHTML = `✓ Rak Terdaftar Sah (<strong>${state.kodeRak}</strong> dari ${state.registeredRacks.length} rak)`;
+        badgeEl.innerHTML = `✓ Rak Sah: <strong>${state.kodeRak}</strong>${meta} (Total ${state.registeredRacks.length} rak)`;
       } else {
         badgeEl.className = 'rack-status-badge invalid';
         badgeEl.innerHTML = `⛔ Rak <strong>${state.kodeRak || '(Kosong)'}</strong> TIDAK TERDAFTAR (Ditolak)`;
@@ -258,6 +299,9 @@
     if (window.PDT_DATABASE && window.PDT_DATABASE.items) {
       database = window.PDT_DATABASE;
       if (!database.barcodes) database.barcodes = {};
+      if (database.racks && database.racks.length > 0) {
+        syncRacksFromDatabase();
+      }
       updateLocationBadge();
     } else {
       fetch('so_data.json')
@@ -265,6 +309,9 @@
         .then(data => {
           database = data;
           if (!database.barcodes) database.barcodes = {};
+          if (database.racks && database.racks.length > 0) {
+            syncRacksFromDatabase();
+          }
           updateLocationBadge();
         })
         .catch(err => {
@@ -306,7 +353,7 @@
       badgeLokToko.textContent = `🏬 ${lokObj.c} - ${lokObj.n} (${lokObj.s})`;
       badgeLokToko.className = 'lokasi-verified-badge';
     } else {
-      badgeLokToko.textContent = `📍 Kode Toko: ${state.lokasiToko || '-'}`;
+      badgeLokToko.textContent = `📍 Kode Toko/Gudang: ${state.lokasiToko || '-'}`;
       badgeLokToko.className = 'lokasi-verified-badge unknown';
     }
   }
@@ -798,11 +845,16 @@
       return;
     }
 
-    rackSelectContainer.innerHTML = filtered.map(r => `
-      <button type="button" class="rack-select-item ${r === state.kodeRak ? 'selected' : ''}" data-rack="${r}">
-        ${r}
-      </button>
-    `).join('');
+    rackSelectContainer.innerHTML = filtered.map(r => {
+      const info = getRackInfo(r);
+      const sub = (info && info.p) ? `<small style="display:block;font-size:0.68rem;color:#0369a1;font-weight:700;">${info.p}</small>` : '';
+      return `
+        <button type="button" class="rack-select-item ${r === state.kodeRak ? 'selected' : ''}" data-rack="${r}" style="text-align:center;">
+          ${r}
+          ${sub}
+        </button>
+      `;
+    }).join('');
 
     rackSelectContainer.querySelectorAll('.rack-select-item').forEach(btn => {
       btn.addEventListener('click', function () {
@@ -820,10 +872,16 @@
     }
     state.kodeRak = rack;
     if (elKodeRak) elKodeRak.value = rack;
+    checkRackPeserta(rack);
     saveSession();
     updateRackUI();
     renderUI();
-    showToast(`Rak aktif: ${state.kodeRak}`);
+    const info = getRackInfo(rack);
+    if (info && info.p) {
+      showToast(`Rak: ${state.kodeRak} (Peserta: ${info.p})`);
+    } else {
+      showToast(`Rak aktif: ${state.kodeRak}`);
+    }
     if (modalSelectRack) modalSelectRack.classList.remove('active');
     if (elScanInput) elScanInput.focus();
   }
