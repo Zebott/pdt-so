@@ -137,9 +137,8 @@
 
   const elModalPreview = document.getElementById('modalPreview');
   const elTxtPreview = document.getElementById('txtPreview') || document.getElementById('txtPreviewArea');
-  const elModalCam = document.getElementById('camWrapper') || document.getElementById('modalCam');
-  const elModalCamPerm = document.getElementById('modalCamPermission');
-  const elCamFileInput = document.getElementById('cameraSnapInput') || document.getElementById('camFileInput');
+  const elModalCam = document.getElementById('modalCam');
+  const elCamFileInput = document.getElementById('cameraSnapInput');
 
   let html5QrCode = null;
 
@@ -1526,93 +1525,239 @@
   const btnDownloadFromPreview = document.getElementById('btnDownloadFromPreview');
   if (btnDownloadFromPreview) btnDownloadFromPreview.addEventListener('click', handleDownloadClick);
 
-  // --- Camera Scanner ---
+  // --- Camera Scanner Modal & Multi-device Fallback ---
+  let isTorchOn = false;
+  let availableCameras = [];
+  let currentCameraIndex = 0;
+
+  function getHtml5QrcodeClass() {
+    if (typeof window !== 'undefined') {
+      if (typeof window.Html5Qrcode !== 'undefined') return window.Html5Qrcode;
+      if (window.__Html5QrcodeLibrary__ && window.__Html5QrcodeLibrary__.Html5Qrcode) {
+        return window.__Html5QrcodeLibrary__.Html5Qrcode;
+      }
+    }
+    if (typeof Html5Qrcode !== 'undefined') return Html5Qrcode;
+    return null;
+  }
+
   const btnOpenCam = document.getElementById('btnOpenCam');
   if (btnOpenCam) {
     btnOpenCam.addEventListener('click', function () {
-      if (elModalCam) elModalCam.style.display = 'block';
-      startCameraScanner();
+      openCameraModal();
     });
   }
 
   const btnCloseCam = document.getElementById('btnCloseCam');
   if (btnCloseCam) {
     btnCloseCam.addEventListener('click', function () {
-      stopCameraScanner();
-      if (elModalCam) elModalCam.style.display = 'none';
+      closeCameraModal();
     });
   }
 
-  const btnCloseCamPerm = document.getElementById('btnCloseCamPerm');
-  if (btnCloseCamPerm && elModalCamPerm) {
-    btnCloseCamPerm.addEventListener('click', () => elModalCamPerm.classList.remove('active'));
+  // Close modal when clicking outside modal box
+  if (elModalCam) {
+    elModalCam.addEventListener('click', function (e) {
+      if (e.target === elModalCam) {
+        closeCameraModal();
+      }
+    });
   }
 
-  const btnTriggerSnap = document.getElementById('btnTriggerSnap');
-  function triggerNativeCameraCapture() {
-    if (elCamFileInput) elCamFileInput.click();
+  const btnSnapPhotoFallback = document.getElementById('btnSnapPhotoFallback');
+  if (btnSnapPhotoFallback && elCamFileInput) {
+    btnSnapPhotoFallback.addEventListener('click', function () {
+      elCamFileInput.click();
+    });
   }
-
-  if (btnTriggerSnap) btnTriggerSnap.addEventListener('click', triggerNativeCameraCapture);
 
   if (elCamFileInput) {
     elCamFileInput.addEventListener('change', function (e) {
       if (!e.target.files || !e.target.files.length) return;
       const file = e.target.files[0];
-      showToast('Memindai foto barcode...');
+      showToast('Memindai barcode dari foto...');
+
+      const Html5Qr = getHtml5QrcodeClass();
+      if (!Html5Qr) {
+        alert('Modul pembaca barcode belum siap.');
+        return;
+      }
 
       if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode('reader');
+        html5QrCode = new Html5Qr('reader');
       }
 
       html5QrCode.scanFile(file, true)
         .then(decodedText => {
-          stopCameraScanner();
-          if (elModalCam) elModalCam.style.display = 'none';
-          if (elModalCamPerm) elModalCamPerm.classList.remove('active');
+          playBeepSuccess();
+          closeCameraModal();
           elScanInput.value = decodedText;
           updateLiveItemPreview(decodedText);
           handleScanInput();
         })
         .catch(err => {
           playBeepError();
-          alert('Barcode tidak terbaca dari foto. Coba arahkan lebih jelas / lebih dekat.');
+          alert('Barcode tidak terdeteksi dari foto. Pastikan foto tidak buram dan fokus ke garis barcode.');
         });
     });
   }
 
-  function startCameraScanner() {
-    if (!window.Html5Qrcode) {
-      alert('Modul kamera scanner belum dimuat.');
-      return;
-    }
-    if (!html5QrCode) {
-      html5QrCode = new Html5Qrcode('reader');
+  function openCameraModal() {
+    if (!elModalCam) return;
+    elModalCam.classList.add('active');
+    startCameraScanner();
+  }
+
+  function closeCameraModal() {
+    stopCameraScanner();
+    if (elModalCam) elModalCam.classList.remove('active');
+  }
+
+  async function startCameraScanner() {
+    const loading = document.getElementById('camLoadingIndicator');
+    const helper = document.getElementById('camHelperText');
+    const btnTorch = document.getElementById('btnToggleTorch');
+    const btnSwitch = document.getElementById('btnSwitchCamera');
+
+    if (loading) {
+      loading.style.display = 'flex';
+      loading.innerHTML = `
+        <div>
+          <div style="font-size: 34px; margin-bottom: 10px;">⏳</div>
+          <div style="font-size: 1rem; font-weight: 800;">Menghubungkan Kamera HP...</div>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;">Izinkan browser mengakses kamera Anda</div>
+        </div>
+      `;
     }
 
-    const config = {
+    const Html5Qr = getHtml5QrcodeClass();
+    if (!Html5Qr) {
+      if (loading) {
+        loading.innerHTML = `
+          <div style="padding: 14px;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
+            <div style="font-weight: 800; font-size: 0.95rem;">Modul Scanner Belum Siap</div>
+            <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 6px;">Silakan gunakan tombol [Ambil Foto Barcode] di bawah.</div>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    if (!html5QrCode) {
+      html5QrCode = new Html5Qr('reader');
+    }
+
+    const qrConfig = {
       fps: 15,
       qrbox: { width: 260, height: 160 },
       aspectRatio: 1.0
     };
 
-    html5QrCode.start(
-      { facingMode: 'environment' },
-      config,
-      (decodedText) => {
-        playBeepSuccess();
+    const onScanSuccess = (decodedText) => {
+      playBeepSuccess();
+      closeCameraModal();
+      elScanInput.value = decodedText;
+      updateLiveItemPreview(decodedText);
+      handleScanInput();
+    };
+
+    // 1. Try rear environment camera directly
+    try {
+      await html5QrCode.start({ facingMode: 'environment' }, qrConfig, onScanSuccess, () => {});
+      if (loading) loading.style.display = 'none';
+      setupCameraFeatures();
+      return;
+    } catch (err1) {
+      console.warn('FacingMode environment failed, checking camera list...', err1);
+    }
+
+    // 2. Try enumerating device cameras
+    try {
+      if (typeof Html5Qr.getCameras === 'function') {
+        const cams = await Html5Qr.getCameras();
+        if (cams && cams.length > 0) {
+          availableCameras = cams;
+          let selectedIndex = cams.findIndex(c => /back|rear|environment/i.test(c.label));
+          if (selectedIndex === -1) selectedIndex = cams.length - 1;
+          currentCameraIndex = selectedIndex;
+
+          await html5QrCode.start(cams[selectedIndex].id, qrConfig, onScanSuccess, () => {});
+          if (loading) loading.style.display = 'none';
+          setupCameraFeatures();
+          return;
+        }
+      }
+    } catch (err2) {
+      console.warn('Camera enumeration failed:', err2);
+    }
+
+    // 3. Fallback: Live video stream blocked/unavailable
+    if (loading) {
+      loading.innerHTML = `
+        <div style="padding: 16px;">
+          <div style="font-size: 36px; margin-bottom: 8px;">📷</div>
+          <div style="font-weight: 800; font-size: 1rem; margin-bottom: 6px;">Kamera Video Tidak Tersedia</div>
+          <div style="font-size: 0.78rem; color: #cbd5e1; line-height: 1.45; margin-bottom: 12px;">
+            Izin kamera video dibatasi oleh browser/perangkat.<br>
+            Klik tombol <strong>[📷 Ambil Foto Barcode]</strong> di bawah untuk memindai via foto kamera HP.
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function setupCameraFeatures() {
+    const btnTorch = document.getElementById('btnToggleTorch');
+    const btnSwitch = document.getElementById('btnSwitchCamera');
+
+    // Setup Torch / Flashlight if supported
+    if (btnTorch && html5QrCode) {
+      try {
+        const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+        if (capabilities && typeof capabilities.torchFeature === 'function' && capabilities.torchFeature().isSupported()) {
+          btnTorch.style.display = 'inline-block';
+          isTorchOn = false;
+          btnTorch.textContent = '💡 Senter';
+          btnTorch.onclick = () => {
+            isTorchOn = !isTorchOn;
+            capabilities.torchFeature().apply(isTorchOn);
+            btnTorch.textContent = isTorchOn ? '🔦 Matikan Senter' : '💡 Senter';
+          };
+        } else {
+          btnTorch.style.display = 'none';
+        }
+      } catch (e) {
+        btnTorch.style.display = 'none';
+      }
+    }
+
+    // Setup camera switch button if multiple cameras exist
+    if (btnSwitch && availableCameras.length > 1) {
+      btnSwitch.style.display = 'inline-block';
+      btnSwitch.onclick = async () => {
         stopCameraScanner();
-        if (elModalCam) elModalCam.style.display = 'none';
-        if (elModalCamPerm) elModalCamPerm.classList.remove('active');
-        elScanInput.value = decodedText;
-        updateLiveItemPreview(decodedText);
-        handleScanInput();
-      },
-      () => {}
-    ).catch(err => {
-      console.warn('Camera stream blocked:', err);
-      if (elModalCamPerm) elModalCamPerm.classList.add('active');
-    });
+        currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+        const nextCam = availableCameras[currentCameraIndex];
+        const loading = document.getElementById('camLoadingIndicator');
+        if (loading) loading.style.display = 'flex';
+        try {
+          await html5QrCode.start(nextCam.id, { fps: 15, qrbox: { width: 260, height: 160 } }, (txt) => {
+            playBeepSuccess();
+            closeCameraModal();
+            elScanInput.value = txt;
+            updateLiveItemPreview(txt);
+            handleScanInput();
+          }, () => {});
+          if (loading) loading.style.display = 'none';
+          setupCameraFeatures();
+        } catch (e) {
+          console.warn('Switch camera error:', e);
+        }
+      };
+    } else if (btnSwitch) {
+      btnSwitch.style.display = 'none';
+    }
   }
 
   function stopCameraScanner() {

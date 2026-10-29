@@ -6,9 +6,9 @@
   <title>ITX PDT Stock Opname Scanner</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#091e3a">
-  <link rel="stylesheet" href="style.css?v=20261028_1955">
+  <link rel="stylesheet" href="style.css?v=20261029_1005">
   <script src="html5-qrcode.min.js"></script>
-  <script src="so_data.js?v=20261028_1955"></script>
+  <script src="so_data.js?v=20261029_1005"></script>
 </head>
 <body>
 
@@ -199,14 +199,7 @@
       </button>
     </div>
 
-    <!-- Camera Scanner Box (Hidden by default) -->
-    <div class="cam-wrapper" id="camWrapper" style="display: none;">
-      <div id="reader"></div>
-      <div class="cam-controls">
-        <span style="color: white; font-size: 0.8rem;">Arahkan kamera ke barcode</span>
-        <button class="btn-cam-close" id="btnCloseCam">Tutup Kamera</button>
-      </div>
-    </div>
+
 
     <!-- Scanned Items List -->
     <div class="card">
@@ -246,22 +239,43 @@
     </div>
   </div>
 
-  <!-- MODAL 2: CAMERA PERMISSION & SNAP -->
-  <div class="modal-overlay" id="modalCamPermission">
-    <div class="modal-box" style="max-width: 440px;">
-      <div class="modal-header">
-        <span>⚠️ Izin Kamera Dibutuhkan</span>
-        <button class="modal-close" id="btnCloseCamPerm">✕</button>
+  <!-- MODAL 2: KAMERA SCANNER BARCODE (POPUP AKTIF) -->
+  <div class="modal-overlay" id="modalCam">
+    <div class="modal-box" style="max-width: 480px; padding: 0; overflow: hidden; background: #0f172a; border-radius: 16px; border: 1.5px solid #334155; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);">
+      <div class="modal-header" style="background: #0f172a; color: white; padding: 12px 16px; border-bottom: 1px solid #334155;">
+        <span style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+          📸 Kamera Scanner Barcode
+        </span>
+        <button class="modal-close" id="btnCloseCam" style="color: white; font-size: 1.3rem;">✕</button>
       </div>
-      <div class="modal-body" style="font-size: 0.88rem; line-height: 1.5;">
-        <p style="margin-bottom: 10px;">Browser memblokir akses langsung stream video kamera (karena kendala izin browser/koneksi tanpa SSL).</p>
-        <p style="margin-bottom: 12px; color: var(--text-muted);">Gunakan mode foto bawaan perangkat Anda di bawah ini:</p>
-        <input type="file" id="cameraSnapInput" accept="image/*" capture="environment" style="display: none;">
-        <div style="text-align: center;">
-          <button type="button" class="btn-preview-txt" id="btnTriggerSnap" style="width: 100%;">
-            📸 Mode Foto Barcode (Kamera Bawaan HP)
+
+      <div style="position: relative; background: #000; min-height: 290px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+        <div id="reader" style="width: 100%;"></div>
+        <div id="camLoadingIndicator" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.95); color: white; text-align: center; padding: 20px; z-index: 5;">
+          <div>
+            <div style="font-size: 34px; margin-bottom: 10px;">⏳</div>
+            <div style="font-size: 1rem; font-weight: 800;">Menghubungkan Kamera HP...</div>
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;">Izinkan browser mengakses kamera Anda</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 12px 16px; background: #0f172a; border-top: 1px solid #1e293b;">
+        <div id="camHelperText" style="color: #94a3b8; font-size: 0.76rem; text-align: center; margin-bottom: 10px;">
+          Arahkan kotak pemindai ke barcode produk / kemasan
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn-preview-txt" id="btnToggleTorch" style="display: none; background: #334155; font-size: 0.8rem; padding: 8px 12px;">
+            💡 Senter
+          </button>
+          <button type="button" class="btn-preview-txt" id="btnSwitchCamera" style="display: none; background: #334155; font-size: 0.8rem; padding: 8px 12px;">
+            🔄 Ganti Kamera
+          </button>
+          <button type="button" class="btn-preview-txt" id="btnSnapPhotoFallback" style="background: #0284c7; color: white; font-size: 0.82rem; padding: 8px 16px; font-weight: 700;">
+            📷 Ambil Foto Barcode
           </button>
         </div>
+        <input type="file" id="cameraSnapInput" accept="image/*" capture="environment" style="display: none;">
       </div>
     </div>
   </div>
@@ -506,6 +520,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261028_1955"></script>
+  <script src="app.js?v=20261029_1005"></script>
 </body>
 </html>
