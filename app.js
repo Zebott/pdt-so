@@ -224,7 +224,18 @@
     if (!state.registeredRacks || state.registeredRacks.length === 0) {
       return false;
     }
-    return state.registeredRacks.includes(clean);
+    if (state.registeredRacks.includes(clean)) return true;
+
+    // Normalisasi format DBF A0011001 <-> A-001-1-001
+    if (/^[A-Z][0-9]{7}$/.test(clean)) {
+      const formatted = `${clean[0]}-${clean.slice(1,4)}-${clean[4]}-${clean.slice(5,8)}`;
+      if (state.registeredRacks.includes(formatted)) return true;
+    }
+    if (/^[A-Z0-9]{1,2}-[0-9]{3}-[0-9]{1,2}-[0-9]{3}$/.test(clean)) {
+      const raw = clean.replace(/-/g, '');
+      if (state.registeredRacks.includes(raw)) return true;
+    }
+    return false;
   }
 
   function updateRackUI() {
@@ -1194,7 +1205,8 @@
 
     let lines = [];
     itemsToExport.forEach(it => {
-      const col3 = (it.rack || state.kodeRak || 'D001').toUpperCase().slice(0, 6).padEnd(6, ' ');
+      const cleanRack = (it.rack || state.kodeRak || 'D001').toUpperCase().trim();
+      const col3 = cleanRack.length <= 6 ? cleanRack.padEnd(6, ' ') : cleanRack;
       const col5 = (it.scannedCode || it.plu || '').slice(0, 13).padEnd(13, ' ');
       const col6 = (it.article || '').slice(0, 15).padEnd(15, ' ');
       const col7 = (it.plu || '').slice(0, 7).padEnd(7, ' ');
@@ -1811,7 +1823,8 @@
 
       let lines = [];
       target.items.forEach(it => {
-        const col3 = (it.rack || target.kodeRak || 'D001').toUpperCase().slice(0, 6).padEnd(6, ' ');
+        const cleanRack = (it.rack || target.kodeRak || 'D001').toUpperCase().trim();
+        const col3 = cleanRack.length <= 6 ? cleanRack.padEnd(6, ' ') : cleanRack;
         const col5 = (it.scannedCode || it.plu || '').slice(0, 13).padEnd(13, ' ');
         const col6 = (it.article || '').slice(0, 15).padEnd(15, ' ');
         const col7 = (it.plu || '').slice(0, 7).padEnd(7, ' ');
