@@ -99,7 +99,7 @@
     tanggal: '',
     lokasiToko: '55022',
     userSo: 'YONO',
-    kodeRak: 'AB/001',
+    kodeRak: 'A-001-1-001',
     deviceId: '1',
     docBatch: '12814',
     items: [],
@@ -182,7 +182,9 @@
     state.registeredRacks = dbRacks;
     saveRegisteredRacks();
 
-    if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
+    if (state.kodeRak === 'AB/001' && state.registeredRacks.includes('A-001-1-001')) {
+      state.kodeRak = 'A-001-1-001';
+    } else if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
       state.kodeRak = state.registeredRacks[0];
       if (elKodeRak) elKodeRak.value = state.kodeRak;
       saveSession();
@@ -438,7 +440,7 @@
         if (obj.tanggal) state.tanggal = obj.tanggal;
         if (obj.lokasiToko) state.lokasiToko = obj.lokasiToko;
         if (obj.userSo) state.userSo = obj.userSo;
-        if (obj.kodeRak) state.kodeRak = obj.kodeRak;
+        if (obj.kodeRak) state.kodeRak = (obj.kodeRak === 'AB/001' ? 'A-001-1-001' : obj.kodeRak);
         if (obj.deviceId) state.deviceId = obj.deviceId;
         if (obj.docBatch) state.docBatch = obj.docBatch;
         if (Array.isArray(obj.items)) state.items = obj.items;
@@ -464,7 +466,9 @@
         state.kodeRak = state.registeredRacks[0];
       }
     }
-    if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
+    if (state.kodeRak === 'AB/001' && state.registeredRacks.includes('A-001-1-001')) {
+      state.kodeRak = 'A-001-1-001';
+    } else if (!isRackValid(state.kodeRak) && state.registeredRacks.length > 0) {
       state.kodeRak = state.registeredRacks[0];
     }
     checkRackPeserta(state.kodeRak);

@@ -59,18 +59,18 @@
           <!-- INPUT NOMOR RAK / AREA AKTIF (DARI RAK.DBF) -->
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label style="margin: 0;">Nomor Rak (RAK.DBF)</label>
+              <label style="margin: 0;">Nomor Rak (MASTER_RAK.DBF)</label>
               <button type="button" class="btn-manage-racks" id="btnOpenManageRacks" title="Kelola / Daftarkan Daftar Rak SO">
                 📋 Daftarkan Rak
               </button>
             </div>
             <div class="rack-row">
-              <input type="text" id="inputKodeRak" class="form-control rack-highlight" list="listRegisteredRacks" value="AB/001" placeholder="Pilih / Ketik Rak..." autocomplete="off">
+              <input type="text" id="inputKodeRak" class="form-control rack-highlight" list="listRegisteredRacks" value="A-001-1-001" placeholder="A-001-1-001" autocomplete="off">
               <datalist id="listRegisteredRacks"></datalist>
               <button type="button" class="btn-new-rack" id="btnNewRack" title="Ganti ke Rak Terdaftar">+ Ganti Rak</button>
             </div>
             <div id="rackValidationStatus" class="rack-status-badge valid">
-              ✓ Rak Sah: AB/001 | Peserta: YONO (Pendamping: DENNI)
+              ✓ Rak Sah: A-001-1-001 | Peserta: Lorong A Rak 001 Tk.1 Palet 001
             </div>
           </div>
 
@@ -184,7 +184,7 @@
         <div class="stat-lbl">Total QTY</div>
       </div>
       <div class="stat-box">
-        <div class="stat-val active-rack" id="activeRackDisplay">AB/001</div>
+        <div class="stat-val active-rack" id="activeRackDisplay">A-001-1-001</div>
         <div class="stat-lbl">Rak Aktif</div>
       </div>
     </div>
@@ -436,7 +436,7 @@
         <!-- 2. Tambah / Paste Rak Manual -->
         <div class="racks-card-box" style="margin-top: 12px;">
           <div class="racks-card-title">✍️ Tambah / Paste Rak Manual</div>
-          <textarea id="txtManualRacks" class="form-control" rows="2" placeholder="Ketik atau paste nomor rak (misal: AB/001, AB/002)"></textarea>
+          <textarea id="txtManualRacks" class="form-control" rows="2" placeholder="Ketik atau paste nomor rak (misal: A-001-1-001, A-001-1-002)"></textarea>
           <button type="button" class="btn-secondary-action" id="btnAddManualRacks" style="margin-top: 8px;">
             ➕ Tambahkan ke Daftar
           </button>
@@ -477,7 +477,7 @@
         <div class="form-group" style="margin-bottom: 8px;">
           <label>Cari atau Ketik Nomor Rak:</label>
           <div style="display: flex; gap: 6px;">
-            <input type="text" id="inputFilterRack" class="form-control rack-highlight" placeholder="Ketik nomor rak (misal AB/001)...">
+            <input type="text" id="inputFilterRack" class="form-control rack-highlight" placeholder="Ketik nomor rak (misal A-001-1-001)...">
             <button type="button" class="btn-primary-action" id="btnConfirmCustomRack" style="width: auto; padding: 0 16px; white-space: nowrap;">
               Pilih
             </button>
